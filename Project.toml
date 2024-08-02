@@ -1,7 +1,27 @@
 name = "Glycosylation"
 authors = ["chris-revell"]
-[compat]
-julia = "1.10.4"
-DrWatson = "2.14.1"
+
 [deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Catalyst = "479239e8-5488-4da2-87a7-35f2df7eef83"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+FromFile = "ff7dd447-1dcb-4ce3-b8ac-22a812192de7"
+HCubature = "19dc6840-f33b-545b-b366-655c7e3ffd49"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SciMLOperators = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
+XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
+
+[compat]
+DrWatson = "2.14.1"
+julia = "1.10.4"
