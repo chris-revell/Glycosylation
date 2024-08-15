@@ -50,38 +50,21 @@ using Dates
 cisternaSeriesID = 1
 
 # PDE discretisation parameters 
-Nx = 101             # Number of discretisation points in space
-Nν = 101             # Number of discretisation points in polymerisation space
-Nghost = 1           # Number of ghost points on each side of the domain 
-Nνplus = Nν+2*Nghost # Number of discretised points including ghost points 
-Nxplus = Nx+2*Nghost # Number of discretised points including ghost points 
+Nx       = 101             # Number of discretisation points in space
+Nν       = 101             # Number of discretisation points in polymerisation space
+Nghost   = 1           # Number of ghost points on each side of the domain 
+Nνplus   = Nν+2*Nghost # Number of discretised points including ghost points 
+Nxplus   = Nx+2*Nghost # Number of discretised points including ghost points 
+dimsPlus = (Nνplus, Nxplus)
 
-xMax, hFun = hFunFromData()
-
-xs   = collect(range(0.0..xMax, Nxplus)) # Positions of discretised vertices in space
+# Generate xMax and width profile from data or function 
+# xMax, mat_h = hFromData(dimsPlus; cisternaSeriesID=1)
+xMax, mat_h, xs = hFromFunction(dimsPlus)
 dx   = xs[2]-xs[1]
 νMax = 1.0
-νs   = collect(range(0.0..νMax, Nνplus)) # Positions of discretised vertices in polymerisation space 
+νs   = collect(range(0.0, νMax, Nνplus)) # Positions of discretised vertices in polymerisation space 
 dν   = νs[2]-νs[1]
-
-# N = 100.0
-
-# σ = 1000.0 # >> Non-dimensionalised substrate availability 
-# α_C = 100.0 # >> 1 measures the solubility of the cargo; equivalently, inverse of affinity for the membrane. α_C >> 1 suggests cargo adsorbs weakly onto membrane
-
-# K₃ = 1.1/(N*σ) # Non-dimensionalised complex dissociation Q->C+E rate relative to complex formation C+E->Q rate (k₁ -> K₁=1.0) 
-# K₂ = 0.9999/N # Non-dimensionalised product formation Q+S->C+E rate relative to complex formation C+E->Q rate (k₁ -> K₁=1.0)
-# K₄ = 0.9999/N # Non-dimensionalised product dissociation C+E-> Q+S rate relative to complex formation C+E->Q rate (k₁ -> K₁=1.0)
-# β  = N*(σ*K₃ - K₂*K₄) # ≈ 1.0 Balance of production and dissociation of cargo
-
-# δ_C = 0.00001
-
-# # 𝓓  = 1.0 # α_C*δ_C*N^2*(K₂ + σ*K₃) Nondimensionalised diffusion constant 
-# 𝓓  = α_C*δ_C*N^2*(K₂ + σ*K₃) # Nondimensionalised diffusion constant 
-
-# Tᵣ = 1.0
-
-
+spacing  = (dν, dx)
 
 K₁ = 1.0
 K₂ = 1.0
@@ -93,9 +76,7 @@ K₄ = 1.0
 N = 100
 β = N*(σ*K₃ - K₂*K₄)
 𝓓 = α_C*δ_C*N^2*(K₂+σ*K₃)
-Tᵣ = 1.0
-
-
+Tᵣ = 0.2
 
 #%%
 
@@ -103,7 +84,7 @@ Tᵣ = 1.0
 paramsName = @savename cisternaSeriesID K₂ K₃ K₄ α_C δ_C σ N Tᵣ
 folderName = "$(paramsName)_$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))"
 # Create frames subdirectory to store system state at each output time
-subFolder = "hFitting"
+subFolder = ""
 mkpath(datadir("sims",subFolder,folderName))
 
 u0fun(x, μx, σx, y, μy, σy) = exp(-(x-μx)^2/σx^2 - (y-μy)^2/σy^2)
@@ -114,10 +95,6 @@ fFun(x, μx, σx) = 0.1 #+ exp(-(x-μx)^2/σx^2)
 μxF = xMax/2.0; σxF=xMax/10.0
 
 #%%
-
-# dims
-dimsPlus = (Nνplus, Nxplus)
-spacing = (dν, dx)
 
 A   = makeIncidenceMatrix3D(Nνplus, Nxplus, 1)
 Ā   = abs.(A)
@@ -142,11 +119,6 @@ l⁻¹ = edgeLengthInverseMatrix(dimsPlus, spacing)
 
 # Diagonal matrices of compartment thickness h over all vertices hᵥ
 # Also diagonal matrix of thickness over edges, formed by taking mean of h at adjacent vertices 0.5.*Ā*hᵥ
-mat_h = zeros(dimsPlus)
-for j=1:Nxplus
-    # mat_h[:, j] .= hFun(xs[j])
-    selectdim(mat_h, 2, j) .= hFun(xs[j])
-end
 hᵥ_vec = reshape(mat_h, nVerts)         # Cisternal thickness evaluated over vertices 
 hₑ_vec = 0.5.*Ā*hᵥ_vec                  # Cisternal thickness evaluated over edges (mean of adjacent vertices)
 hᵥ = spdiagm(hᵥ_vec)                    # Cisternal thickness over vertices, as a sparse diagonal matrix
@@ -241,4 +213,23 @@ sol = solve(prob, Vern9(), saveat=Tᵣ/100.0)
 concentrationSurfaceMovie(sol.u, sol.t, xs, νs, (Nν,Nx), Nghost, ghostVertexMask; subFolder=subFolder, folderName=folderName)
 
 spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, (Nν,Nx), Nghost, W, ghostVertexMask; subFolder=subFolder, folderName=folderName)
+
+
+
+# N = 100.0
+
+# σ = 1000.0 # >> Non-dimensionalised substrate availability 
+# α_C = 100.0 # >> 1 measures the solubility of the cargo; equivalently, inverse of affinity for the membrane. α_C >> 1 suggests cargo adsorbs weakly onto membrane
+
+# K₃ = 1.1/(N*σ) # Non-dimensionalised complex dissociation Q->C+E rate relative to complex formation C+E->Q rate (k₁ -> K₁=1.0) 
+# K₂ = 0.9999/N # Non-dimensionalised product formation Q+S->C+E rate relative to complex formation C+E->Q rate (k₁ -> K₁=1.0)
+# K₄ = 0.9999/N # Non-dimensionalised product dissociation C+E-> Q+S rate relative to complex formation C+E->Q rate (k₁ -> K₁=1.0)
+# β  = N*(σ*K₃ - K₂*K₄) # ≈ 1.0 Balance of production and dissociation of cargo
+
+# δ_C = 0.00001
+
+# # 𝓓  = 1.0 # α_C*δ_C*N^2*(K₂ + σ*K₃) Nondimensionalised diffusion constant 
+# 𝓓  = α_C*δ_C*N^2*(K₂ + σ*K₃) # Nondimensionalised diffusion constant 
+
+# Tᵣ = 1.0
 

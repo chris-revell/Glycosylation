@@ -6,23 +6,33 @@ using DataFrames
 using DrWatson
 using Interpolations
 
-function hFunFromData(; cisternaSeriesID=1)
+function hFromData(dimsPlus; cisternaSeriesID=1)
     df = DataFrame(XLSX.readtable(datadir("exp_raw", "ModellingData.xlsx"), 1))
     hs = filter(x->x.series_ID==cisternaSeriesID, df)[1,5:end]
     hs = collect(skipmissing(hs))./100.0
     xMaxInferred = (length(hs)-1)   
+    xs   = collect(range(0.0..xMax, dimsPlus[2])) # Positions of discretised vertices in space
     itp_cubic = cubic_spline_interpolation(0:xMaxInferred, hs)
-    hFunD(x) = itp_cubic(x)
-    return xMaxInferred, hFunD
+    hFun(x) = itp_cubic(x)
+    mat_h = zeros(dimsPlus)
+    for j=1:Nxplus
+        # mat_h[:, j] .= hFun(xs[j])
+        selectdim(mat_h, 2, j) .= hFun(xs[j])
+    end
+    return xMaxInferred, mat_h, xs
 end
 
-function hFunFromFunction(; xMax=100.0)
-    μxh = xMax/2.0; σxh = xMax/10.0
-    # hFun(x, μx, σx) = 0.1+exp(-(x-μx)^2/σx^2)
-    hFunF(x) = 0.1+exp(-(x-μxh)^2/σxh^2)
-    return xMax, hFunF
+function hFromFunction(dimsPlus; xMax=100.0, μxh = 50.0, σxh = 10.0)
+    hFun(x) = 0.1+exp(-(x-μxh)^2/σxh^2)
+    xs   = collect(range(0.0, xMax, dimsPlus[2])) # Positions of discretised vertices in space
+    mat_h = zeros(dimsPlus)
+    for j=1:dimsPlus[2]
+        # mat_h[:, j] .= hFun(xs[j])
+        selectdim(mat_h, 2, j) .= hFun(xs[j])
+    end
+    return xMax, mat_h, xs
 end
 
-export hFunFromData, hFunFromFunction
+export hFromData, hFromFunction
 
 end
