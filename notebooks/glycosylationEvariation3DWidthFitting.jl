@@ -35,7 +35,7 @@ using Dates
 @from "$(srcdir("MakeIncidenceMatrix.jl"))" using MakeIncidenceMatrix
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 
-simpsonsRule(xs) = sum(xs[1:end-1].+xs[2:end])./2.0
+trapeziumRule(xs) = sum(xs[1:end-1].+xs[2:end])./2.0
 
 function productionTotalM(u, W, ghostVertexMask, dims, ϕ)
     uInternal = reshape((W*u)[ghostVertexMask], dims)
@@ -286,7 +286,7 @@ function update_func!(L, u, p, t)
     cs = reshape(u, (Nνplus, Nxplus, Nyplus))     
     for k = 1:Nyplus
         for j= 1:Nxplus
-            integrationFactor = K₂/(K₂ + simpsonsRule(cs[:,j,k]))
+            integrationFactor = K₂/(K₂ + trapeziumRule(cs[:,j,k]))
             matE[:,j,k] .= matFₑ[:,j,k].*integrationFactor
         end
     end

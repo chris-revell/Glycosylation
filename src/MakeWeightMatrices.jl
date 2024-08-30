@@ -10,16 +10,28 @@ using SparseArrays
 using LinearAlgebra
 using InvertedIndices
 
-function solChecks(sol, W, ghostVertexMask)
-    mass1 = sum((W*sol.u[1])[ghostVertexMask])
-    massEnd = sum((W*sol.u[end])[ghostVertexMask])
+# function solChecks(sol, W, ghostVertexMaskSparse)
+#     mass1 = sum((W*sol.u[1])[ghostVertexMaskSparse])
+#     massEnd = sum((W*sol.u[end])[ghostVertexMaskSparse])
+#     @show mass1
+#     @show massEnd
+#     minima = [minimum(u[ghostVertexMaskSparse]) for u in sol.u]
+#     all_t_min = minimum(minima)
+#     @show all_t_min
+#     return nothing
+# end
+
+function solChecks(sol, W, ghostVertexMaskSparse)
+    mass1 = sum(ghostVertexMaskSparse*W*sol.u[1])
+    massEnd = sum(ghostVertexMaskSparse*W*sol.u[end])
     @show mass1
     @show massEnd
-    minima = [minimum(u[ghostVertexMask]) for u in sol.u]
+    minima = [minimum(ghostVertexMaskSparse*u) for u in sol.u]
     all_t_min = minimum(minima)
     @show all_t_min
     return nothing
 end
+
 
 # Matrices for picking out ν and xy directions in derivatives 
 # Matrix of i-directed edge accessibility

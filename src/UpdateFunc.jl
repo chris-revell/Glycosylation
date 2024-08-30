@@ -19,11 +19,12 @@ function update_func!(L, u, p, t)
         K₂,
         matE,
         E,
-        matFₑ = p
+        matFₑ,
+        νs = p
 
     cs = reshape(u, (Nνplus, Nxplus))     
     for j = 1:Nxplus
-        integrationFactor = K₂/(K₂ + simpsonsRule(cs[:,j]))
+        integrationFactor = K₂/(K₂ + trapeziumRule(cs[:,j], νs))
         matE[:,j] .= matFₑ[:,j].*integrationFactor
     end
     E .= spdiagm(reshape(matE, nVerts)) 

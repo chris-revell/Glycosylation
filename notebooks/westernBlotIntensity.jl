@@ -5,16 +5,16 @@ using XLSX
 
 df = DataFrame(XLSX.readtable(datadir("exp_raw", "ModellingData.xlsx"), 2))
 
-simpsonsRule(xs) = sum(xs[1:end-1].+xs[2:end])./2.0
+trapeziumRule(xs) = sum(xs[1:end-1].+xs[2:end])./2.0 #wrong
 
 wtVec = filter(x->x.KO=="WT", df)[!,"normalised intensity"]
-wt = reverse(wtVec./simpsonsRule(wtVec))
+wt = reverse(wtVec./trapeziumRule(wtVec))
 GMAP210_1Vec = filter(x->x.KO=="GMAP210 KO1", df)[!,"normalised intensity"]
-GMAP210_1 = reverse(GMAP210_1Vec./simpsonsRule(GMAP210_1Vec))
+GMAP210_1 = reverse(GMAP210_1Vec./trapeziumRule(GMAP210_1Vec))
 GMAP210_2Vec = filter(x->x.KO=="GMAP210 KO2", df)[!,"normalised intensity"]
-GMAP210_2 = reverse(GMAP210_2Vec./simpsonsRule(GMAP210_2Vec))
+GMAP210_2 = reverse(GMAP210_2Vec./trapeziumRule(GMAP210_2Vec))
 Golgin160_2Vec = filter(x->x.KO=="Golgin160 KO2", df)[!,"normalised intensity"]
-Golgin160_2 = reverse(Golgin160_2Vec./simpsonsRule(Golgin160_2Vec))
+Golgin160_2 = reverse(Golgin160_2Vec./trapeziumRule(Golgin160_2Vec))
 
 νs = collect(1:length(wt))
 

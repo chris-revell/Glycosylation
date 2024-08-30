@@ -2,7 +2,8 @@ using CairoMakie
 using DrWatson
 
 # Basic parameters: geometry
-Ω = 1.0         # Lumen volume
+h₀ = 3.0     # Cisternal thickness 
+# Ω = 1.0         # Lumen volume
 Ωperp = 100.0  # Lumen footprint area
 N = 100         # Maximum polymer length 
 # Basic parameters: rate constants
@@ -18,12 +19,14 @@ k₄ = 0.01   # Product dissociation
 C_b = 1.0  # Initial bulk monomer concentration
 S_b = 100.0  # Initial bulk substrate concentration
 S_0 = 1.0  # Early surface substrate concentration 
-E_0 = 0.001/Ωperp # Mean enzyme concentration
+E_0 = 0.001 # Mean enzyme concentration
 # Basic parameters: diffusivities
 D_C = 0.001  # Monomer/polymer diffusivity
 D_S = 0.01  # Substrate diffusivity
 # Basic parameters: Timescale 
 Tᵣ⁰ = 1.0  # Release time
+
+
 # Derived quantities: rates
 α_C = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Balance of complex in bulk to complex on membrane
 α_S = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Balance of substrate in bulk to substrate on membrane
@@ -31,7 +34,8 @@ K₂  = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensiona
 K₃  = k₃/k₁    # Non-dimensionalised product formation rate
 K₄  = k₄/k₁    # Non-dimensionalised prodict dissociation rate
 # Derived quantities: masses and concentrations 
-h₀  = Ω/Ωperp                   # Mean thickness 
+# h₀  = Ω/Ωperp                   # Mean thickness 
+Ω = Ωperp*h₀
 L₀  = sqrt(π)*Ω / (Ωperp)^(1.5) # Mean radius 
 C_0 = C_b*h₀/(2*(1+α_C))        # Early surface monomer concentration
 𝓒   = C_b*Ω                     # Initial monomer mass
@@ -156,15 +160,21 @@ println("")
 
 #%%
 
-Ωperps = collect(10:10:500)
-𝓟s = 𝓟.(ϕ, E_0, Ωperps, Ω, k_Sa, k_Sd, S_b, k_Ca, k_Cd, C_b, k₁, k₂, k₃, k₄, N)
+# Ωperps = collect(10:10:500)
+# Ωperps = collect(10:10:500)
+
+Ωperp = 100.0
+Ωs = collect(10:10:500)
+
+# 𝓟s = 𝓟.(ϕ, E_0, Ωperps, Ω, k_Sa, k_Sd, S_b, k_Ca, k_Cd, C_b, k₁, k₂, k₃, k₄, N)
+𝓟s = 𝓟.(ϕ, E_0, Ωperp, Ωs, k_Sa, k_Sd, S_b, k_Ca, k_Cd, C_b, k₁, k₂, k₃, k₄, N)
 
 
 fig = Figure(size=(750,750), fontsize=16)
 ax = Axis(fig[1,1], xlabelsize=32, ylabelsize=32)
-ax.xlabel = "Ω⟂"
+ax.xlabel = "Ω"
 ax.ylabel = "𝓟"
-lines!(Ωperps, 𝓟s)
+lines!(Ωs, 𝓟s)
 display(fig)
-paramsName = @savename ϕ E_0 Ω k_Sa k_Sd S_b k_Ca k_Cd C_b k₁ k₂ k₃ k₄ N
+paramsName = @savename ϕ E_0 Ωperp k_Sa k_Sd S_b k_Ca k_Cd C_b k₁ k₂ k₃ k₄ N
 save(datadir("$(paramsName).png"), fig)

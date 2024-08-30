@@ -49,6 +49,8 @@ using Dates
 
 cisternaSeriesID = 1
 
+nSpatialDims = 1
+
 # PDE discretisation parameters 
 Nx       = 101             # Number of discretisation points in space
 Nν       = 101             # Number of discretisation points in polymerisation space
@@ -76,46 +78,45 @@ K₄ = 1.0
 N = 100
 β = N*(σ*K₃ - K₂*K₄)
 𝓓 = α_C*δ_C*N^2*(K₂+σ*K₃)
-Tᵣ = 0.2
+Tᵣ = 0.01
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename cisternaSeriesID K₂ K₃ K₄ α_C δ_C σ N Tᵣ
+paramsName = @savename cisternaSeriesID K₂ K₃ K₄ α_C δ_C σ N Tᵣ nSpatialDims
 folderName = "$(paramsName)_$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))"
 # Create frames subdirectory to store system state at each output time
 subFolder = ""
 mkpath(datadir("sims",subFolder,folderName))
 
-u0fun(x, μx, σx, y, μy, σy) = exp(-(x-μx)^2/σx^2 - (y-μy)^2/σy^2)
-μνu0 = 0.0; σνu0 = νMax/10.0
-μxu0 = xMax/2.0; σxu0 = 10.0*xMax
-
-fFun(x, μx, σx) = 0.1 #+ exp(-(x-μx)^2/σx^2)
-μxF = xMax/2.0; σxF=xMax/10.0
-
 #%%
 
+# Incidence matrices 
 A   = makeIncidenceMatrix3D(Nνplus, Nxplus, 1)
 Ā   = abs.(A)
 Aᵀ  = transpose(A)
 Aᵤₚ = dropzeros((Ā-A).÷2)
 
+# Number of vertices and number of edges, total and in each dimension
 nVerts  = Nνplus*Nxplus       # Total number of vertices 
 nEdgesi = (Nνplus-1)*Nxplus  # Number of i-directed edges (ν, in this case)
 nEdgesj = Nνplus*(Nxplus-1)  # Number of j-directed edges (x, in this case)
 nEdges  = nEdgesi+nEdgesj     # Total number of edges over all dimensions 
 
-# Ghost point masks
-ghostVertexMask = makeGhostVertexMask(dimsPlus)
-ghostVertexMaskSparse = spdiagm(ghostVertexMask)
-ghostEdgeMask = makeGhostEdgeMask(dimsPlus)
-ghostEdgeMaskSparse = spdiagm(ghostEdgeMask)
+# Ghost point masks; vectors and sparse diagonal matrices to exclude ghost points and edges connected to ghost points 
+ghostVertexMaskVec = makeGhostVertexMask(dimsPlus)
+ghostVertexMaskSparse = spdiagm(ghostVertexMaskVec)
+ghostEdgeMaskVec = makeGhostEdgeMask(dimsPlus)
+ghostEdgeMaskSparse = spdiagm(ghostEdgeMaskVec)
 
 # Weights
-W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
-W⁻¹ =  vertexVolumeWeightsInverseMatrix(dimsPlus, spacing)
-l⁻¹ = edgeLengthInverseMatrix(dimsPlus, spacing)
+W   = vertexVolumeWeightsMatrix(dimsPlus, spacing)
+W⁻¹ = vertexVolumeWeightsInverseMatrix(dimsPlus, spacing)
+l⁻¹ = edgeLengthInverseMatrix(dimsPlus, spacing) # Diagonal matrix of edge lengths
+
+# Gradient operators 
+∇ₑ = l⁻¹*A       # Gradient operator giving gradient on each edge
+∇cdot = -W⁻¹*Aᵀ  # Divergence operator giving divergence on each vertex calculated from edges 
 
 # Diagonal matrices of compartment thickness h over all vertices hᵥ
 # Also diagonal matrix of thickness over edges, formed by taking mean of h at adjacent vertices 0.5.*Ā*hᵥ
@@ -127,29 +128,35 @@ aᵥ = spdiagm(1.0./(1.0 .+ α_C.*hᵥ_vec)) # Prefactor 1/(1+α_C*hᵥ(x)) eval
 aₑ = spdiagm(1.0./(1.0 .+ α_C.*hₑ_vec)) # Prefactor 1/(1+α_C*hₑ(x)) evaluated over edges, packaged into a sparse diagonal matrix for convenience
 
 # Velocity field 
-V_i = fill(β, (Nνplus-1, Nxplus))
-V_j = fill(0.0, (Nνplus, Nxplus-1))
-Vvec = vcat(reshape(V_i, nEdgesi), reshape(V_j, nEdgesj))
-V = ghostEdgeMaskSparse*spdiagm(Vvec)*aₑ   # Diagonal matrix of advection velocities at each edge
+# V_i = fill(β, (Nνplus-1, Nxplus))
+# V_j = fill(0.0, (Nνplus, Nxplus-1))
+# Vvec = vcat(reshape(V_i, nEdgesi), reshape(V_j, nEdgesj))
+# V = ghostEdgeMaskSparse*spdiagm(Vvec)*aₑ   # Diagonal matrix of advection velocities at each edge
 
 # Diffusivity field over edges 
 # Set no-flux boundary conditions by enforcing zero diffusivity in edges connection ghost points
-𝓓_i  = fill(dx*K₂*K₄, (Nνplus-1, Nxplus))
-𝓓_j  = fill(dν*K₂*K₄, (Nνplus, Nxplus-1))
+𝓓_i  = fill(dx, (Nνplus-1, Nxplus))
+𝓓_j  = fill(dν, (Nνplus, Nxplus-1))
 𝓓vec = vcat(reshape(𝓓_i, nEdgesi), reshape(𝓓_j, nEdgesj))
-𝓓    = ghostEdgeMaskSparse*spdiagm(𝓓vec)*aₑ # Diagonal matrix of advection velocities at each edge
+𝓓    = ghostEdgeMaskSparse*spdiagm(𝓓vec) # Diagonal matrix of advection velocities at each edge
 
 # Matrices for picking out ν and xy directions in derivatives 
-P  = ghostEdgeMaskSparse*spdiagm(vcat(ones(Int64, nEdgesi), ones(Int64, nEdgesj)))     # Diagonal sparse matrix to exclude all edges adjacent to ghost points  
+# P  = ghostEdgeMaskSparse*spdiagm(ones(Int64, nEdges))     # Diagonal sparse matrix to exclude all edges adjacent to ghost points  
 Pν = ghostEdgeMaskSparse*spdiagm(vcat(ones(Int64, nEdgesi), zeros(Int64, nEdgesj)))   # Diagonal sparse matrix to exclude all xy edges and ν edges adjacent to ghost points  
 Px = ghostEdgeMaskSparse*spdiagm(vcat(zeros(Int64, nEdgesi), ones(Int64, nEdgesj)))   # Diagonal sparse matrix to exclude all ν edges and xy edges adjacent to ghost points 
 
-# Diagonal matrix of edge lengths
-l_i = fill(dν, (Nνplus-1, Nxplus))
-l_j = fill(dx, (Nνplus, Nxplus-1))
-lvec = vcat(reshape(l_i, nEdgesi), reshape(l_j, nEdgesj))
-l = spdiagm(lvec)
-l⁻¹ = spdiagm(1.0./lvec)
+# PDE operator components
+L1 = aᵥ*∇cdot*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
+L2 = aᵥ*∇cdot*(𝓓*hₑ*Px*∇ₑ)
+
+#%%
+
+u0fun(x, μx, σx, y, μy, σy) = exp(-(x-μx)^2/σx^2 - (y-μy)^2/σy^2)
+μνu0 = 0.0; σνu0 = νMax/10.0
+μxu0 = xMax/2.0; σxu0 = 10.0*xMax
+
+# fFun(x, μx, σx) = 1.0 #+ exp(-(x-μx)^2/σx^2)
+# μxF = xMax/2.0; σxF=xMax/10.0
 
 # Initial conditions using Gaussian
 uMat = zeros(Float64, Nνplus, Nxplus)
@@ -157,48 +164,42 @@ for xx=1:Nxplus, νν=1:Nνplus
     uMat[νν, xx] = u0fun(νs[νν], μνu0, σνu0, xs[xx], μxu0, σxu0)            
 end
 u0 = reshape(uMat, nVerts)
-u0[ghostVertexMask.!=true] .= 0.0
+u0[ghostVertexMaskVec.!=true] .= 0.0
 integ = sum(W*u0)
 u0 ./= integ
 
-∇ₑ = l⁻¹*A       # Gradient operator giving gradient on each edge
-∇cdot = -W⁻¹*Aᵀ  # Divergence operator giving divergence on each vertex calculated from edges 
-
-matFₑ = zeros(Nνplus, Nxplus)
-for j=1:Nxplus
-    matFₑ[:, j] .= fFun(xs[j], μxF, σxF)
-    # selectdim(matFₑ, 2, j) .= fFun(xs[j], μxF, σxF)
-    # matFₑ[i] = 1.0
-end
+matFₑ = ones(Float64, Nνplus, Nxplus)
+vecFₑ = ones(Float64, nVerts)
+integ = sum((W*vecFₑ)[ghostVertexMaskVec])
+vecFₑ .*= π/integ
 matE = zeros(Nνplus, Nxplus)
-E = spdiagm(reshape(matE, nVerts))
+E = spdiagm(zeros(nVerts))
 
-L1 = aᵥ*∇cdot*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
-L2 = aᵥ*∇cdot*(𝓓*hₑ*Px*∇ₑ)
+#%%
 
 p = (L1 = L1,
     L2 = L2,
     Nνplus = Nνplus,
-    Nxplus = Nxplus,
     K₂ = K₂,
     matE = matE,
     E = E,
-    matFₑ = matFₑ)
+    matFₑ = matFₑ,
+    dν = dν)
 
 function update_func!(L, u, p, t)
     @unpack L1,
         L2,
         Nνplus,
-        Nxplus,
         K₂,
         matE,
         E,
-        matFₑ = p
+        matFₑ,
+        dν = p
 
-    cs = reshape(u, (Nνplus, Nxplus))     
-    for j = 1:Nxplus
-        integrationFactor = K₂/(K₂ + simpsonsRule(cs[:,j]))
-        matE[:,j] .= matFₑ[:,j].*integrationFactor
+    cs = reshape(u, size(matE))
+    matE[1, :] .= matFₑ[1,:].*(K₂./(K₂ .+ dν.*sum(cs[2:end-1,:], dims=1)[1,:]))
+    for i=2:Nνplus
+        matE[i, :] .= matE[1, :]
     end
     E .= spdiagm(reshape(matE, nVerts)) 
     L .= E*L1 .+ L2
@@ -210,9 +211,9 @@ sol = solve(prob, Vern9(), saveat=Tᵣ/100.0)
 
 #%%
 
-concentrationSurfaceMovie(sol.u, sol.t, xs, νs, (Nν,Nx), Nghost, ghostVertexMask; subFolder=subFolder, folderName=folderName)
+concentrationSurfaceMovie(sol.u, sol.t, xs, νs, (Nν,Nx), Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
 
-spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, (Nν,Nx), Nghost, W, ghostVertexMask; subFolder=subFolder, folderName=folderName)
+spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, (Nν,Nx), Nghost, W, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
 
 
 
