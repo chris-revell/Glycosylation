@@ -25,7 +25,7 @@ end
 function hFromFunction(dimsPlus; xMax=100.0, μxh = 50.0, σxh = 10.0)
     hFun(x) = 0.1+exp(-(x-μxh)^2/σxh^2)
     xs   = collect(range(0.0, xMax, dimsPlus[2])) # Positions of discretised vertices in space
-    mat_h = zeros(dimsPlus)
+    mat_h = zeros(dimsPlus...)
     for j=1:dimsPlus[2]
         # mat_h[:, j] .= hFun(xs[j])
         selectdim(mat_h, 2, j) .= hFun(xs[j])

@@ -49,20 +49,20 @@ end
 # is true if vertex i in the flattened vector of vertices is an internal vertex
 # but false if vertex i is a ghost vertex in the flattened vector of vertices 
 # This can be used to exclude ghost points from calculations over the whole state vector
-function makeGhostVertexMask(dims)
-    ghostMaskVertex = fill(true, (dims...))
-    for i=1:length(dims)
+function makeGhostVertexMask(dimsPlus)
+    ghostMaskVertex = fill(true, dimsPlus...)
+    for i=1:length(dimsPlus)
         selectdim(ghostMaskVertex, i, 1) .= false
-        selectdim(ghostMaskVertex, i, dims[i]) .= false
+        selectdim(ghostMaskVertex, i, dimsPlus[i]) .= false
     end
-    # ghostMaskVertex = spdiagm(reshape(ghostMaskVertex, prod(dims)))
-    return reshape(ghostMaskVertex, prod(dims))
+    # ghostMaskVertex = spdiagm(reshape(ghostMaskVertex, prod(dimsPlus)))
+    return reshape(ghostMaskVertex, prod(dimsPlus))
 end
 
-function makeGhostEdgeMask(dims)
+function makeGhostEdgeMask(dimsPlus)
     ghostMaskEdge = Bool[]
-    for i=1:length(dims)
-        dimsVec_i = collect(dims)
+    for i=1:length(dimsPlus)
+        dimsVec_i = copy(dimsPlus)
         dimsVec_i[i] = dimsVec_i[i]-1
         nEdgesi = prod(dimsVec_i)
         l_i = fill(true, dimsVec_i...)
@@ -76,10 +76,53 @@ function makeGhostEdgeMask(dims)
     return ghostMaskEdge
 end
 
+
+# function makeGhostEdgeMaskNew(dimsPlus)
+#     dimEdgeCount = Int64[]
+#     for i=1:length(dimsPlus)
+#         push!(dimEdgeCount, (dimsPlus[i]-1)*prod(dimsPlus[Not(i)]))
+#     end
+#     nEdges  = sum(dimEdgeCount)
+
+#     ghostEdgeMaskVec = fill(true, nEdges)
+
+#     dimEdgeArrayStrides = (1, (dimsPlus[1]-1), (dimsPlus[1]-1)*dimsPlus[2])
+#     for kk=1:dimsPlus[3]
+#         for jj=1:dimsPlus[2]
+#             for ii in [1,(dimsPlus[1]-1)]
+#                 edgeIndex = 1 + (ii-1)*dimEdgeArrayStrides[1] + (jj-1)*dimEdgeArrayStrides[2] + (kk-1)*dimEdgeArrayStrides[3]
+#                 ghostEdgeMaskVec[edgeIndex] = false
+#             end
+#         end
+#     end  
+#     dimEdgeArrayStrides = (1, dimsPlus[1], dimsPlus[1]*(dimsPlus[2]-1))
+#     for kk=1:dimsPlus[3]
+#         for jj in [1,(dimsPlus[2]-1)]
+#             for ii=1:dimsPlus[1]
+#                 edgeIndex = dimEdgeCount[1] + 1 + (ii-1)*dimEdgeArrayStrides[1] + (jj-1)*dimEdgeArrayStrides[2] + (kk-1)*dimEdgeArrayStrides[3]
+#                 ghostEdgeMaskVec[edgeIndex] = false
+#             end
+#         end
+#     end  
+#     dimEdgeArrayStrides = (1, dimsPlus[1], dimsPlus[1]*dimsPlus[2])
+#     for kk in [1,(dimsPlus[3]-1)]
+#         for jj=1:dimsPlus[2]
+#             for ii=1:dimsPlus[1]
+#                 edgeIndex = dimEdgeCount[1] + dimEdgeCount[2] + 1 + (ii-1)*dimEdgeArrayStrides[1] + (jj-1)*dimEdgeArrayStrides[2] + (kk-1)*dimEdgeArrayStrides[3]
+#                 ghostEdgeMaskVec[edgeIndex] = false
+#             end
+#         end
+#     end  
+#     return ghostEdgeMaskVec
+# end
+
+
+
+
 # Vertex weights
 # Forming a diagonal matrix of volumes around each vertex, divided by 2 at the periphery
 function vertexVolumeWeightsMatrix(dims, spacing)
-    matW = fill(prod(spacing), dims)
+    matW = fill(prod(spacing), dims...)
     for i=1:length(dims)
         selectdim(matW, i, 1) ./= 2.0
         selectdim(matW, i, dims[i]) ./= 2.0
@@ -92,7 +135,7 @@ end
 # Vertex weights inverse
 # Forming a diagonal matrix of 1/volumes around each vertex, with volumes divided by 2 at the periphery
 function vertexVolumeWeightsInverseMatrix(dims, spacing)
-    matW = fill(prod(spacing), dims)
+    matW = fill(prod(spacing), dims...)
     for i=1:length(dims)
         selectdim(matW, i, 1) ./= 2.0
         selectdim(matW, i, dims[i]) ./= 2.0
@@ -105,25 +148,40 @@ end
 # Diagonal matrix of edge lengths
 function edgeLengthMatrix(dims, spacing)
     lvec = Float64[]
-    dimsVec = collect(dims)
+    # dimsVec = collect(dims)
     for i=1:length(dims)
         # l_i = fill(spacing[i], (dims[1]-1, Nyplus, Nνplus))
-        nEdgesi = (dims[i]-1)*prod(dimsVec[Not(i)])
+        nEdgesi = (dims[i]-1)*prod(dims[Not(i)])
         l_i = fill(spacing[i], nEdgesi)
-        append!(lvec, reshape(l_i, nEdgesi))
+        append!(lvec, l_i)
     end
     l = spdiagm(lvec)
     # l⁻¹ = spdiagm(1.0./lvec)
     return l
 end
 
+# Diagonal matrix of areas perpendicular to each edge, 
+# meaning the area through which diffusive flux in the direction of a given edge passes
+function edgePerpendicularAreaMatrix(dims, spacing)  
+    Aperpvec = Float64[]
+    # dimsVec = collect(dims)
+    for i=1:length(dims)
+        area = prod(spacing[Not(i)])
+        nEdgesi = (dims[i]-1)*prod(dims[Not(i)])
+        Ai = fill(spacing[i], nEdgesi)
+        append!(Aperpvec, Ai)
+    end
+    Aperpₑ   = spdiagm(Aperpvec) 
+    return Aperpₑ
+end
+
 # Diagonal inverse matrix of edge lengths
 function edgeLengthInverseMatrix(dims, spacing)
     lvec = Float64[]
-    dimsVec = collect(dims)
+    # dimsVec = collect(dims)
     for i=1:length(dims)
         # l_i = fill(spacing[i], (dims[1]-1, Nyplus, Nνplus))
-        nEdgesi = (dims[i]-1)*prod(dimsVec[Not(i)])
+        nEdgesi = (dims[i]-1)*prod(dims[Not(i)])
         l_i = fill(spacing[i], nEdgesi)
         append!(lvec, reshape(l_i, nEdgesi))
     end
@@ -133,7 +191,7 @@ function edgeLengthInverseMatrix(dims, spacing)
 end
 
 function setBoundaryEdgesToZero(dims)
-    ghostMaskArray = fill(true, (dims...))
+    ghostMaskArray = fill(true, dims...)
     for i=1:length(dims)
         selectdim(ghostMaskArray1, i, 1) .= false
         selectdim(ghostMaskArray1, i, dims[i]) .= false
@@ -145,10 +203,12 @@ end
 export solChecks
 export makeGhostVertexMask
 export makeGhostEdgeMask
+export makeGhostEdgeMaskNew
 export vertexVolumeWeightsMatrix
 export vertexVolumeWeightsInverseMatrix
 export edgeLengthMatrix
 export edgeLengthInverseMatrix
+export edgePerpendicularAreaMatrix
 export setBoundaryEdgesToZero
 
 end

@@ -29,16 +29,17 @@ function concentrationSurfaceMovie(solu, ts, xs, νs, dims, Nghost, ghostVertexM
     return nothing 
 end
 
-function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dims, Nghost, vertexWeightsMatrix, ghostVertexMaskVec; subFolder="", folderName="")
+function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dimsReal, Nghost, vertexWeightsMatrix, ghostVertexMaskVec; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    dν = νs[3]-νs[2]
     # Find limits
-    uInternal2D = reshape((vertexWeightsMatrix*solu[end])[ghostVertexMaskVec], dims)
-    M = sum(uInternal2D, dims=2)[:,1]
+    uReshaped = reshape((vertexWeightsMatrix*solu[end])[ghostVertexMaskVec], dimsReal...)
+    M = sum(uReshaped, dims=(2,3))
     minima = Float64[]
     maxima = Float64[]
     for i=1:length(ts)
-        uInternal2D .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dims)
-        M .= sum(uInternal2D, dims=2)[:,1]
+        uReshaped .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dimsReal...)
+        M .= sum(uReshaped, dims=(2,3))./dν
         push!(minima, minimum(M))
         push!(maxima, maximum(M))
     end
@@ -49,24 +50,24 @@ function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dims, Nghost, vertexWeigh
     ax = CairoMakie.Axis(fig[1, 1], aspect=1)
     ax.xlabel = "ν"
     ax.ylabel = "M, ∱cdxdy"
-    ax.title = "Integral of Cₛ over x against ν"
-    M = Observable(zeros(dims[1]))
-    lines!(ax, νs[1:Nghost:end-2*Nghost], M)
+    ax.title = "Integral of Cₛ over space against ν"
+    M = Observable(zeros(dimsReal[1]))
+    lines!(ax, νs[2:end-1], M)
     ylims!(ax, (globalmin, globalmax))
     record(fig, datadir("sims",subFolder, folderName, "spaceIntegralOver_ν_Movie.mp4"), 1:length(ts); framerate=10) do i
-        uInternal2D .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dims)
-        M[] .= sum(uInternal2D, dims=2)[:,1]
+        uReshaped .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dimsReal...)
+        M[] .= dropdims((sum(uReshaped, dims=(2,3))), dims=Tuple(collect(2:ndims(uReshaped))))./dν
         M[] = M[]
     end
     save(datadir("sims",subFolder,folderName,"finalSpaceIntegralOver_ν.png"), fig)
     return nothing
 end
 
-function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, ghostVertexMaskVec, vertexWeightsMatrix; subFolder="", folderName="")
+function productionHeatmap3D(ϕ, solu, ts, xs, νs, dimsReal, ghostVertexMaskVec, vertexWeightsMatrix; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
 
-    uInternal = reshape((vertexWeightsMatrix*solu[end])[ghostVertexMaskVec], dims)
-    MsInternal = sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
+    uInternal = reshape((vertexWeightsMatrix*solu[end])[ghostVertexMaskVec], dimsReal...)
+    MsInternal = sum(uInternal[round(Int64, ϕ*dimsReal[1]):end, :, :], dims=1)
     globalmax = maximum(MsInternal)
 
     fig = Figure(size=(1000,1000))
@@ -74,11 +75,11 @@ function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, ghostVertexMaskVec, ve
     ax.xlabel = "x"
     ax.ylabel = "y"
     ax.title = "Useful production P over x and y"
-    M = Observable(zeros(dims[1:2]))
+    M = Observable(zeros(dimsReal[1:2]))
     
     heatmap!(ax, M, colorrange=(0.0, globalmax), colormap=:inferno)
     record(fig, datadir("sims",subFolder,folderName,"productionHeatmap.mp4"), 1:length(solu); framerate=10) do i
-        uInternal .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dims)
+        uInternal .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dimsReal)
         MsInternal .= sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
         M[] .= MsInternal[1,:,:]
         M[] = M[]

@@ -3,25 +3,25 @@ module UsefulFunctions
 
 using LinearAlgebra
 using SparseArrays
+using UnPack
 
-
-# function updateEintegral!(E, u, dimsPlus, K₂, matE, matFₑ)
-#     cs = reshape(u, dimsPlus)     
-#     for j = 1:dimsPlus[2]
-#         integrationFactor = K₂/(K₂ + trapeziumRule(cs[:,j]))
-#         matE[:,j] .= matFₑ[:,j].*integrationFactor
-#     end
-#     E .= spdiagm(reshape(matE, nVerts))
-# end
-
-
+# Integrate over ν to find E field in spatial dimensions.
+# When state vector u is reshaped to an array with shape dimsPlus, assume ν is the first dimension of this array
+# Function is agnostic about the whether dimsPlus is of length 2 or 3.
 function E!(u, dimsPlus, Esparse, matE, matFₑ, K₂, dν)
     # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
-    cs = reshape(u, dimsPlus)
+    cs = selectdim(reshape(u, dimsPlus...), 1, 2:(dimsPlus[1]-1))
     # dν.*sum(cs[2:end-1,:], dims=1)[1,:] Gives integral of concentration over ν at each point in x
-    matE .= matFₑ.*(K₂./(K₂ .+ dν.*sum(cs[2:end-1,:], dims=1)[1,:]))
-    Esparse[diagind(Esparse)] .= repeat(matE, inner=dimsPlus[1])
+    matE .= matFₑ.*(K₂./(K₂ .+ dν.*dropdims(sum(cs, dims=1), dims=1)))
+    Esparse[diagind(Esparse)] .= repeat(reshape(matE, prod(size(matE))), inner=dimsPlus[1])
     return nothing
+end
+
+# Function to update linear operator with new values for E at each iteration in solving the ODE system
+function updateOperator!(L, u, p, t)
+    @unpack L1, L2, u0, dimsPlus, Esparse, matE, matFₑ, K₂, dν = p
+    E!(u, dimsPlus, Esparse, matE, matFₑ, K₂, dν)
+    L .= Esparse*L1 .+ L2
 end
 
 # Integral of h*C over space 
@@ -41,25 +41,10 @@ end
 
 P_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, Tᵣstar) = M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω)/Tᵣstar
 
-# function Mxy(u, W, ghostVertexMaskVec, dims, ϕ)
-#     uInternal = reshape((W*u[ghostVertexMaskVec]), dims)
-#     return sum(selectdim(uInternal, 1, round(Int, ϕ*dims[1]):end), dims=1)
-# end
-
-# function M(u, W, ghostVertexMaskVec, dims, ϕ)
-#     uInternal = reshape((W*u[ghostVertexMaskVec]), dims)
-#     return sum(selectdim(uInternal, 1, round(Int, ϕ*dims[1]):end))
-# end
-
-# function P(u, W, ghostVertexMaskVec, dims, ϕ, T)
-#     uInternal = reshape((W*u[ghostVertexMaskSparse]), dims)
-#     return sum(selectdim(uInternal, 1, round(Int, ϕ*dims[1]):end))/T
-# end 
-
-
 export M_tilde
 export M_star
 export P_star
 export E!
+export updateOperator!
 
 end
