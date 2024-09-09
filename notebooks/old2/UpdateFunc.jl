@@ -1,6 +1,6 @@
 #
 #  UpdateFunc.jl
-#  GolgiModels
+# Glycosylation
 #
 #  Created by Christopher Revell on 04/06/2024.
 

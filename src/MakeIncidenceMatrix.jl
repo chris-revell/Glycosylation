@@ -1,6 +1,6 @@
 #
 #  MakeIncidenceMatrix.jl
-#  GolgiModels
+# Glycosylation
 #
 #  Created by Christopher Revell on 02/05/2024.
 
@@ -9,7 +9,6 @@ module MakeIncidenceMatrix
 using LinearAlgebra
 using SparseArrays
 using Base.Threads
-using LoopVectorization
 
 # State matrix uMat has dimensions Nplus x Nplus. 
 # Column major order, so when flattened to a state vector u, u[1:Nplus] == uMat[:,1], u[1+Nplus:2*Nplus]==uMat[2,:] etc

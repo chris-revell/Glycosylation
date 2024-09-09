@@ -70,29 +70,29 @@ Tᵣstar= 100.0  # Release time
 ϕ     = 0.5
 
 # PDE discretisation parameters 
-Nν       = 31             # Number of discretisation points in polymerisation space
-Nx       = 31             # Number of discretisation points in space
-Ny       = 31             # Number of discretisation points in space
+Nν       = 11             # Number of discretisation points in polymerisation space
+Nx       = 11             # Number of discretisation points in space
+Ny       = 11             # Number of discretisation points in space
 Nghost   = 1           # Number of ghost points on each side of the domain 
 Nνplus   = Nν+2*Nghost # Number of discretised points including ghost points 
 Nxplus   = Nx+2*Nghost # Number of discretised points including ghost points
 Nyplus   = Ny+2*Nghost # Number of discretised points including ghost points
 
 Ngrid = 101
-nSpatialDims == 2 ? dimsPlus = [Nνplus, Nxplus] : dimsPlus = [Nνplus, Nxplus, Nyplus]
-nSpatialDims == 2 ? dimsReal = [Nν, Nx] : dimsReal = [Nν, Nx, Ny]
+nSpatialDims == 1 ? dimsPlus = [Nνplus, Nxplus] : dimsPlus = [Nνplus, Nxplus, Nyplus]
+nSpatialDims == 1 ? dimsReal = [Nν, Nx] : dimsReal = [Nν, Nx, Ny]
 
 # Generate xMax and width profile from data or function 
 # xMax, mat_h = hFromData(dimsPlus; cisternaSeriesID=1)
 xMax, mat_h, xs = hFromFunction(dimsPlus)
 dx   = xs[2]-xs[1]
-nSpatialDims > 2 ? yMax = xMax : yMax = 2
+nSpatialDims == 1 ? yMax = 2 : yMax = xMax
 ys   = collect(range(0.0, yMax, Nyplus))
 dy   = ys[2]-ys[1]
 νMax = 1.0
 νs   = collect(range(0.0, νMax, Nνplus)) # Positions of discretised vertices in polymerisation space 
 dν   = νs[2]-νs[1]
-nSpatialDims == 2 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
+nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 
 h₀ = mean(selectdim(mat_h, 2, 1:Nxplus))
 
@@ -148,8 +148,8 @@ ghostEdgeMaskVec = makeGhostEdgeMask(dimsPlus)
 ghostEdgeMaskSparse = spdiagm(ghostEdgeMaskVec)
 
 # Matrices for picking out ν and xy directions in derivatives 
-Pν  = ghostEdgeMaskSparse*spdiagm(vcat(ones(Int64, dimEdgeCount[1]), zeros(Int64, dimEdgeCount[2]+dimEdgeCount[3])))   # Diagonal sparse matrix to exclude all xy edges 
-Pxy  = ghostEdgeMaskSparse*spdiagm(vcat(zeros(Int64, dimEdgeCount[1]), ones(Int64, dimEdgeCount[2]+dimEdgeCount[3])))   # Diagonal sparse matrix to exclude all ν edges 
+Pν  = ghostEdgeMaskSparse*spdiagm(vcat(ones(Int64, dimEdgeCount[1]), zeros(Int64, sum(dimEdgeCount[2:end]))))   # Diagonal sparse matrix to exclude all xy edges 
+Pxy  = ghostEdgeMaskSparse*spdiagm(vcat(zeros(Int64, dimEdgeCount[1]), ones(Int64, sum(dimEdgeCount[2:end]))))   # Diagonal sparse matrix to exclude all ν edges 
 
 # Weights
 W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
@@ -174,21 +174,19 @@ aᵥ = spdiagm(1.0./(1.0 .+ α_C.*hᵥ_vec)) # Prefactor 1/(1+α_C*hᵥ(x)) eval
 aₑ = spdiagm(1.0./(1.0 .+ α_C.*hₑ_vec)) # Prefactor 1/(1+α_C*hₑ(x)) evaluated over edges, packaged into a sparse diagonal matrix for convenience
 
 # Initial conditions using Gaussian
-u0fun(x, μx, σx, y, μy, σy, z, μz, σz) = exp(-(x-μx)^2/σx^2 - (y-μy)^2/σy^2 - (z-μz)^2/σz^2)
-μνu0 = 0.0; σνu0 = νMax/10.0
-μxu0 = xMax/2.0; σxu0 = 10.0*xMax
-μyu0 = xMax/2.0; σyu0 = 10.0*xMax
+# u0fun(x, μx, σx, y, μy, σy, z, μz, σz) = exp(-(x-μx)^2/σx^2 - (y-μy)^2/σy^2 - (z-μz)^2/σz^2)
+
+u0fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
 uMat = zeros(Float64, dimsPlus...)
-for yy=1:dimsPlus[3], xx=1:dimsPlus[2], νν=1:dimsPlus[1]
-    uMat[νν, xx, yy] = u0fun(νs[νν], μνu0, σνu0, xs[xx], μxu0, σxu0, ys[yy], μyu0, σyu0)
+for ind in CartesianIndices(uMat)
+    uMat[ind] = u0fun([νs[ind[1]]], [0.0,], [νMax/10.0])
 end
 u0 = reshape(uMat, nVerts)
 u0[ghostVertexMaskVec.!=true] .= 0.0
 # For integration to normalise the number of monomers, we need to multiply the concentration at each point by the ν value of that point
-νMat = ones(dimsPlus...)
+νMat = ones(Int64, dimsPlus...)
 for ii=1:dimsPlus[1]
     selectdim(νMat, 1, ii) .*= (ii-1)
-    # νMat[ii,:].*=(ii-1)
 end
 νSparse = spdiagm(reshape(νMat, nVerts))
 integ = sum(ghostVertexMaskSparse*W*νSparse*u0)
@@ -221,7 +219,13 @@ sol = solve(prob, Vern9(), saveat=Tᵣ/100.0, progress=true)
 println("finished sim")
 
 if nSpatialDims==1
-    u2d = [u[:,:,2] for u in sol.u]
-    concentrationSurfaceMovie(u2d, sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
+    concentrationSurfaceMovie(sol.u, sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
+else
+    # uMats = [reshape(u, dimsPlus...) for u in sol.u]
+    # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]
+    # concentrationSurfaceMovie([reshape(u, Nνplus*Nxplus) for u in uSlices], sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
 end
+# concentrationSurfaceMovie(solu, ts, xs, νs, dims, Nghost, ghostVertexMaskVec; subFolder="", folderName="") 
+
 
