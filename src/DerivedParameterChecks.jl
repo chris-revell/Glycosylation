@@ -1,28 +1,28 @@
 
-h₀    = 0.1
-Ωperp = 100.0  # Lumen footprint area
-N     = 100         # Maximum polymer length 
-k_Cd  = 200.0 # Complex desorption rate
-k_Ca  = 1.0 # Complex adsorption rate
-k_Sd  = 200.0 # Substrate desorption rate
-k_Sa  = 1.1 # Substrate adsorption rate
-k₁    = 1.0   # Complex formation forward reaction rate 
-k₂    = 0.1   # Complex dissociation reverse reaction rate 
-k₃    = 1.0   # Product formation
-k₄    = 1.0  # Product dissociation 
-E_0   = 0.001
-𝓒     = 100.0
-𝓢     = 1000.0
-D_C   = 0.01  # Monomer/polymer diffusivity
-D_S   = 0.01  # Substrate diffusivity
-Tᵣstar= 10.0  # Release time
-ϕ     = 0.5
+module DerivedParameterChecks
 
-function parameterChecking(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+# h₀    = 0.1
+# Ωperp = 100.0  # Lumen footprint area
+# N     = 100         # Maximum polymer length 
+# k_Cd  = 200.0 # Complex desorption rate
+# k_Ca  = 1.0 # Complex adsorption rate
+# k_Sd  = 200.0 # Substrate desorption rate
+# k_Sa  = 1.1 # Substrate adsorption rate
+# k₁    = 1.0   # Complex formation forward reaction rate 
+# k₂    = 0.1   # Complex dissociation reverse reaction rate 
+# k₃    = 1.0   # Product formation
+# k₄    = 1.0  # Product dissociation 
+# E_0   = 0.001
+# 𝓒     = 100.0
+# 𝓢     = 1000.0
+# D_C   = 0.01  # Monomer/polymer diffusivity
+# D_S   = 0.01  # Substrate diffusivity
+# Tᵣstar= 10.0  # Release time
+# ϕ     = 0.5
+
+function derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
 
     𝓔    = 2*Ωperp*E_0   # Total enzyme mass
-    K₃   = k₃/k₁    # Non-dimensionalised product formation rate
-    K₄   = k₄/k₁    # Non-dimensionalised prodict dissociation rate
     δ_C  = π*D_C/(k₁*𝓔)
     δ_S  = π*D_S/(k₁*𝓔)
     Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
@@ -33,12 +33,13 @@ function parameterChecking(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, 
     S_b  = 𝓢/Ω 
     C_0  = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
     S_0  = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
-    K₂   = k₂/(k₁*C_0)              # (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
+    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
+    K₃   = k₃/k₁    # Non-dimensionalised product formation rate
+    K₄   = k₄/k₁    # Non-dimensionalised prodict dissociation rate
     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
     ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ωperp)
     𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)
     β    = N*(σ*K₃ - K₂*K₄)
-    K₂  = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
     L₀  = sqrt(π)*Ω / (Ωperp)^(1.5) # Mean radius 
 
 
@@ -89,7 +90,17 @@ function parameterChecking(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, 
     printstyled("$(2*k₂*k₄*k_Sa*Ωperp < (S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω)"; color = (2*k₂*k₄*k_Sa*Ωperp < (S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω ? :green : :red))
     println("")
 
+
+    println("σK₃ ∼ K₄ ∼ 1")
+    println("σK3=$(σ*K₃), K4=$(K₄)")
+    printstyled("$(isapprox(σ*K₃, 1.0, rtol=0.1)), "; color = (isapprox(σ*K₃, 1.0, rtol=0.1) ? :green : :red))
+    printstyled("$(isapprox(K₄, 1.0, rtol=0.1))"; color = (isapprox(K₄, 1.0, rtol=0.1) ? :green : :red))
+    println("")
+
+
     return Dict("𝓔"=>𝓔, "K₃"=>K₃, "K₄"=>K₄, "δ_C"=>δ_C, "δ_S"=>δ_S, "Tᵣ"=>Tᵣ, "Ω"=>Ω, "α_C"=>α_C, "α_S"=>α_S, "C_b"=>C_b, "S_b"=>S_b, "C_0"=>C_0, "S_0"=>S_0, "K₂"=>K₂, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β, "K₂"=>K₂, "L₀"=>L₀)
 end 
 
-params = parameterChecking(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+export derivedParameterChecks
+
+end

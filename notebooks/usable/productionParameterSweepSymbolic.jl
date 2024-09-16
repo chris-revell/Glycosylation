@@ -32,12 +32,18 @@ expressions = [
     Δ ~ k₁*𝓒/(2*k₂*Ωperp),
 ]
 
-𝓟star = π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
-expr = 𝓟star ~ π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+expressionsDict = Dict(lhs.(expressions).=>rhs.(expressions))
 
-sub1 = substitute(𝓟star, Dict(lhs.(expressions).=>rhs.(expressions)))
-sub2 = substitute(sub1, Dict(lhs.(expressions).=>rhs.(expressions)))
-sub3 = substitute(sub2, Dict(lhs.(expressions).=>rhs.(expressions)))
+𝓟star = π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+# expr = 𝓟star ~ π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+
+sub1 = substitute(𝓟star, expressionsDict)
+sub2 = substitute(sub1, expressionsDict)
+sub3 = substitute(sub2, expressionsDict)
+
+args = [h₀ Ωperp N k₁ k₂ k₃ k₄ 𝓢 k_Sa k_Sd 𝓒 k_Ca k_Cd ϕ Tᵣstar]
+
+𝓟starFunc = eval(build_function(sub3, args...))
 
 
 valuesDict = Dict(
@@ -59,12 +65,6 @@ valuesDict = Dict(
     Tᵣstar  => 50.0,
     ϕ => 0.5,
 )
-
-args = [h₀ Ωperp N k₁ k₂ k₃ k₄ 𝓢 k_Sa k_Sd 𝓒 k_Ca k_Cd ϕ Tᵣstar]
-
-𝓟starFunc = eval(build_function(sub3, args...))
-
-
 
 Ωperp = 100.0  # Lumen footprint area
 N     = 100         # Maximum polymer length 

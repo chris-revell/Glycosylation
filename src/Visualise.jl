@@ -9,7 +9,8 @@ using FromFile
 
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 
-function concentrationSurfaceMovie(solu, ts, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName="") 
+# function concentrationSurfaceMovie(solu, ts, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName="") 
+function concentrationSurfaceMovie(solu, ts, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
     fig = Figure(size=(1000,1000))
     ax = Axis3(fig[1, 1], aspect=:equal, azimuth=-π/4)
@@ -21,7 +22,8 @@ function concentrationSurfaceMovie(solu, ts, xs, νs, dimsReal, Nghost, ghostVer
     globalmax = maximum([maximum(u[ghostVertexMaskVec]) for u in solu])
     zlims!(ax, (globalmin, globalmax))
     clims = (globalmin,globalmax)
-    surface!(ax, xs[Nghost+1:end-Nghost], νs[Nghost+1:end-Nghost], uInternal, colorrange=clims, colormap=:batlow)
+    # surface!(ax, xs[Nghost+1:end-Nghost], νs[Nghost+1:end-Nghost], uInternal, colorrange=clims, colormap=:batlow)
+    surface!(ax, uInternal, colorrange=clims, colormap=:batlow)
     record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(ts); framerate=10) do i
         uInternal[] .= reshape(solu[i][ghostVertexMaskVec], dimsReal...)
         uInternal[] = uInternal[]

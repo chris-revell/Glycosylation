@@ -39,6 +39,7 @@ using DrWatson
 using Printf
 using SciMLOperators
 using Dates
+using CairoMakie
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("Visualise.jl"))" using Visualise
@@ -46,10 +47,7 @@ using Dates
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
 
-
 nSpatialDims = 1
-
-h₀ = 0.02
 
 Ωperp = 100.0  # Lumen footprint area
 N     = 100         # Maximum polymer length 
@@ -70,50 +68,86 @@ Tᵣstar= 100.0  # Release time
 ϕ     = 0.5
 
 Nghost= 1           # Number of ghost points on each side of the domain 
-Ngrid = 101
+Ngrid = 51
 
 xMax = 100.0
 xs   = collect(range(0.0, xMax, Ngrid+2*Nghost)) # Positions of discretised vertices in space
-mat_h = h₀.*ones(fill(Ngrid+2*Nghost, nSpatialDims+1)...)
 
-Nνplus   = Ngrid+2*Nghost # Number of discretised points including ghost points 
-Nxplus   = Ngrid+2*Nghost # Number of discretised points including ghost points
-Nyplus   = Ngrid+2*Nghost # Number of discretised points including ghost points
-nSpatialDims == 1 ? dimsPlus = [Nνplus, Nxplus] : dimsPlus = [Nνplus, Nxplus, Nyplus]
-nSpatialDims == 1 ? dimsReal = [Ngrid, Ngrid] : dimsReal = [Ngrid, Ngrid, Ngrid]
-dx   = xs[2]-xs[1]
-if nSpatialDims > 1 
-    yMax = xMax
-    ys   = collect(range(0.0, yMax, Nyplus))
-    dy   = ys[2]-ys[1]
+# h₀s = collect(0.1:0.1:3.0)
+h₀s = collect(0.001:0.02:0.2001)
+
+sols = []
+hᵥs = []
+α_Cs = []
+Ωs =[]
+C_bs =[]
+
+for h₀ in h₀s
+    @show h₀
+
+    mat_h = h₀.*ones(fill(Ngrid+2*Nghost, nSpatialDims+1)...)
+
+    sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+    push!(sols, sol)
+    Ω    = h₀*Ωperp
+    push!(Ωs, Ω)
+    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
+    push!(α_Cs, α_C)
+    hᵥ_vec = reshape(mat_h, (Ngrid+2*Nghost)^(nSpatialDims+1))
+    hᵥ = spdiagm(hᵥ_vec)
+    push!(hᵥs, hᵥ)
+    C_b  = 𝓒/Ω 
+    push!(C_bs, C_b)
 end
-νMax = 1.0
-νs   = collect(range(0.0, νMax, Nνplus)) # Positions of discretised vertices in polymerisation space 
-dν   = νs[2]-νs[1]
-nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 
-derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+dimsPlus = fill(Ngrid+2*Nghost, nSpatialDims+1)
+spacing = [1.0/(Ngrid+Nghost), xs[2]-xs[1]]
+W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
+ghostVertexMaskVec = makeGhostVertexMask(dimsPlus)
+fig = Figure(size=(500,500))
+ax1 = Axis(fig[1,1])
+Pstars = Float64[]
+for i=1:length(sols)
+    push!(Pstars, P_star(sols[i][end], W, ghostVertexMaskVec, [Ngrid, Ngrid], hᵥs[i], ϕ, α_Cs[i], C_bs[i], Ωs[i], spacing[1], Tᵣstar))
+end
+lines!(ax1, h₀s, Pstars)
+ax1.xlabel = "h₀"
+ax1.ylabel = L"𝓟^*"
 
-sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+Ps = 𝓟starUniform.(ϕ, 𝓒, 𝓢, E_0, h₀s, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
 
-println("finished sim")
+ax2 = Axis(fig[2,1])
+ax2.xlabel = "h₀"
+ax2.ylabel = L"𝓟^*"
+ylims!(ax2, (0.0,maximum(Ps)))
+xlims!(ax2, (0.0,maximum(h₀s)))
+lines!(ax2, h₀s, Ps)
+
+linkxaxes!(ax1, ax2)
+
+display(fig)
+
+# save("simulationPvsh.png",fig)
+
+
+
 
 #%%
 
-# Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims Ωperp k_Cd k_Ca k_Sd k_Sa k₁ k₂ k₃ k₄ E_0 𝓒 𝓢 D_C D_S Tᵣstar ϕ
-folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
-# Create frames subdirectory to store system state at each output time
-subFolder = ""
-mkpath(datadir("sims",subFolder,folderName))
 
-if nSpatialDims==1
-    ghostVertexMaskVec = makeGhostVertexMask(dimsPlus)
-    concentrationSurfaceMovie(sol.u, sol.t, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName=folderName)
-else
-    # uMats = [reshape(u, dimsPlus...) for u in sol.u]
-    # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]
-    # concentrationSurfaceMovie([reshape(u, Nνplus*Nxplus) for u in uSlices], sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
-end
+
+
+
+
+
+
+# if nSpatialDims==1
+#     ghostVertexMaskVec = makeGhostVertexMask(fill(Ngrid+2*Nghost, 2))
+#     concentrationSurfaceMovie(sol.u, sol.t, fill(Ngrid,2), Nghost, ghostVertexMaskVec; subFolder="", folderName=folderName)
+# else
+#     # uMats = [reshape(u, dimsPlus...) for u in sol.u]
+#     # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]
+#     # concentrationSurfaceMovie([reshape(u, Nνplus*Nxplus) for u in uSlices], sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
+#     spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
+# end
 

@@ -50,10 +50,10 @@ using Statistics
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 # @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
-@from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
+# @from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
 
-function glycosylationAnyD(nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
 
     # PDE discretisation parameters 
     # Nνplus   = Nν+2*Nghost # Number of discretised points including ghost points 
@@ -68,17 +68,20 @@ function glycosylationAnyD(nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k
 
     # Generate xMax and width profile from data or function 
     # xMax, mat_h = hFromData(dimsPlus; cisternaSeriesID=1)
-    xMax, mat_h, xs = hFromFunction(dimsPlus)
+    xMax = maximum(xs)
     dx   = xs[2]-xs[1]
-    nSpatialDims == 1 ? yMax = 2 : yMax = xMax
-    ys   = collect(range(0.0, yMax, Nyplus))
-    dy   = ys[2]-ys[1]
+    if nSpatialDims > 1 
+        yMax = xMax
+        ys   = collect(range(0.0, yMax, Nyplus))
+        dy   = ys[2]-ys[1]
+    end
     νMax = 1.0
     νs   = collect(range(0.0, νMax, Nνplus)) # Positions of discretised vertices in polymerisation space 
     dν   = νs[2]-νs[1]
+    
     nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 
-    h₀ = mean(selectdim(mat_h, 2, 1:Nxplus))
+    h₀ = mean(selectdim(mat_h, 1, 1))
 
     𝓔    = 2*Ωperp*E_0   # Total enzyme mass
     K₃   = k₃/k₁    # Non-dimensionalised product formation rate
@@ -94,8 +97,8 @@ function glycosylationAnyD(nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k
     C_0  = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
     S_0  = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
     K₂   = k₂/(k₁*C_0)              # (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
-    σ    = S_0/C_0                         #(k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-    ϵ    = E_0/C_0                  # 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ωperp)
+    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+    ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ωperp)
     𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)
     β    = N*(σ*K₃ - K₂*K₄)
 

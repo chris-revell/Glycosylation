@@ -108,8 +108,8 @@ S_b  = 𝓢/Ω
 C_0 = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
 S_0 = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
 K₂  = k₂/(k₁*C_0)              # (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
-σ   = S_0/C_0                         #(k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-ϵ   = E_0/C_0                  # 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ωperp)
+σ   = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+ϵ   = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ωperp)
 𝓓   = α_C*δ_C*N^2*(K₂ + σ*K₃)
 β = N*(σ*K₃ - K₂*K₄)
 

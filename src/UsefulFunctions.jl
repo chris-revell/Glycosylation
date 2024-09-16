@@ -26,25 +26,41 @@ end
 
 # Integral of h*C over space 
 function M_tilde(u, W, ghostVertexMaskVec, dims, dν, hᵥ)
-    uInternal = reshape((W*hᵥ*u)[ghostVertexMaskVec], dims)
+    uInternal = reshape((W*hᵥ*u)[ghostVertexMaskVec], dims...)
     M_tilde = sum(uInternal, dims=(2:length(dims)))
     return M_tilde./dν
 end
 
 # Dimensional bulk functional mass integrated over space and polymerisation 
-function M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω)
-    uInternal = reshape((W*hᵥ*u)[ghostVertexMaskVec], dims)
-    M_tilde = sum(selectdim(uInternal, 1, round(Int, ϕ*dims[1]):dims[1]))
+function M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)
+    uInternal = reshape((W*hᵥ*u)[ghostVertexMaskVec], dims...)
+    M̃ = M_tilde(u, W, ghostVertexMaskVec, dims, dν, hᵥ)
+    Mϕ = dν*sum(M̃[round(Int, ϕ*dims[1]) : dims[1]])
     prefactor = α_C*C_b*Ω/(π*(1+α_C))
-    return prefactor*M_tilde
+    return prefactor*Mϕ
 end
 
-P_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, Tᵣstar) = M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω)/Tᵣstar
+P_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)/Tᵣstar
+
+function 𝓟starUniform(ϕ, 𝓒, 𝓢, E_0, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
+    𝓔    = 2*Ωperp*E_0
+    Ω    = h₀*Ωperp
+    C_b  = 𝓒/Ω
+    S_b  = 𝓢/Ω
+    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
+    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
+    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω))
+    K₃   = k₃/k₁
+    K₄   = k₄/k₁
+    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+    return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+end
 
 export M_tilde
 export M_star
 export P_star
 export E!
 export updateOperator!
+export 𝓟starUniform
 
 end
