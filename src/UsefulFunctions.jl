@@ -56,6 +56,26 @@ function 𝓟starUniform(ϕ, 𝓒, 𝓢, E_0, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_
     return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
 end
 
+function homogeneousWidthC(ν̃, t̃, h₀, 𝓒, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, Ωperp, E_0, Tᵣstar)
+    𝓔    = 2*Ωperp*E_0
+    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
+    Ω    = h₀*Ωperp
+    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
+    C_b  = 𝓒/Ω 
+    S_b  = 𝓢/Ω 
+    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω))
+    K₃   = k₃/k₁
+    K₄   = k₄/k₁
+    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+    ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
+    β    = N*(σ*K₃ - K₂*K₄)
+    Etilde = K₂/(1+K₂)
+    p1 = (1+α_C)/(π*Etilde*K₂*K₄*t̃)
+    p2 = ν̃*(1+α_C)-Etilde*β*t̃
+    p3 = 4*Etilde*K₂*K₄*(1+α_C)*t̃
+    return sqrt(p1)*exp(-p2^2/p3)
+end
+
 export M_tilde
 export M_star
 export P_star
