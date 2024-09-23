@@ -47,7 +47,7 @@ using Dates
 @from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
 
 
-nSpatialDims = 2
+nSpatialDims = 1
 
 h₀ = 0.02
 
@@ -66,7 +66,7 @@ E_0   = 0.001
 𝓢     = 10000.0
 D_C   = 0.01  # Monomer/polymer diffusivity
 D_S   = 0.01  # Substrate diffusivity
-Tᵣstar= 10000.0  # Release time
+Tᵣstar= 100.0  # Release time
 ϕ     = 0.5
 
 Nghost= 1           # Number of ghost points on each side of the domain 
@@ -97,7 +97,7 @@ derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃
 #%%
 
 sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
-
+                       
 println("finished sim")
 
 #%%
@@ -109,11 +109,10 @@ folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 subFolder = ""
 mkpath(datadir("sims",subFolder,folderName))
 
-ghostVertexMaskVec = makeGhostVertexMask(dimsPlus)
 W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
 
 if nSpatialDims==1
-    concentrationSurfaceMovie(sol.u, sol.t, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName=folderName)
+    concentrationSurfaceMovie(sol.u, sol.t, dimsReal; subFolder="", folderName=folderName)
 else
     # uMats = [reshape(u, dimsPlus...) for u in sol.u]
     # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]

@@ -120,7 +120,8 @@ end
 
 
 # Vertex weights
-# Forming a diagonal matrix of volumes around each vertex, divided by 2 at the periphery
+# Forming a diagonal matrix of volumes around each vertex, 
+# divided by 2 at the periphery
 function vertexVolumeWeightsMatrix(dims, spacing)
     matW = fill(prod(spacing), dims...)
     for i=1:length(dims)
@@ -133,7 +134,8 @@ function vertexVolumeWeightsMatrix(dims, spacing)
 end
 
 # Vertex weights inverse
-# Forming a diagonal matrix of 1/volumes around each vertex, with volumes divided by 2 at the periphery
+# Forming a diagonal matrix of 1/volumes around each vertex, 
+# with volumes divided by 2 at the periphery
 function vertexVolumeWeightsInverseMatrix(dims, spacing)
     matW = fill(prod(spacing), dims...)
     for i=1:length(dims)
@@ -148,46 +150,48 @@ end
 # Diagonal matrix of edge lengths
 function edgeLengthMatrix(dims, spacing)
     lvec = Float64[]
-    # dimsVec = collect(dims)
     for i=1:length(dims)
-        # l_i = fill(spacing[i], (dims[1]-1, Nyplus, Nνplus))
         nEdgesi = (dims[i]-1)*prod(dims[Not(i)])
         l_i = fill(spacing[i], nEdgesi)
         append!(lvec, l_i)
     end
     l = spdiagm(lvec)
-    # l⁻¹ = spdiagm(1.0./lvec)
     return l
-end
-
-# Diagonal matrix of areas perpendicular to each edge, 
-# meaning the area through which diffusive flux in the direction of a given edge passes
-function edgePerpendicularAreaMatrix(dims, spacing)  
-    Aperpvec = Float64[]
-    # dimsVec = collect(dims)
-    for i=1:length(dims)
-        area = prod(spacing[Not(i)])
-        nEdgesi = (dims[i]-1)*prod(dims[Not(i)])
-        Ai = fill(spacing[i], nEdgesi)
-        append!(Aperpvec, Ai)
-    end
-    Aperpₑ   = spdiagm(Aperpvec) 
-    return Aperpₑ
 end
 
 # Diagonal inverse matrix of edge lengths
 function edgeLengthInverseMatrix(dims, spacing)
     lvec = Float64[]
-    # dimsVec = collect(dims)
     for i=1:length(dims)
-        # l_i = fill(spacing[i], (dims[1]-1, Nyplus, Nνplus))
         nEdgesi = (dims[i]-1)*prod(dims[Not(i)])
         l_i = fill(spacing[i], nEdgesi)
-        append!(lvec, reshape(l_i, nEdgesi))
+        append!(lvec, l_i)
     end
-    # l = spdiagm(lvec)
     l⁻¹ = spdiagm(1.0./lvec)
     return l⁻¹
+end
+
+# Diagonal matrix of areas perpendicular to each edge, 
+# meaning the area through which diffusive 
+# flux in the direction of a given edge passes
+# Factor of 1/2 applied to peripheral edges, assuming peripheral 
+# vertices lie on the edge of the solution domain so that the surrounding
+# grid points are halved.
+function edgePerpendicularAreaMatrix(dims, spacing)  
+    Aperpvec = Float64[]
+    for i=1:length(dims)
+        edgeDims = copy(dims)
+        edgeDims[i] -= 1
+        nEdgesi = prod(edgeDims)
+        AMat = fill(prod(spacing[Not(i)]), edgeDims...)
+        for j = [jj for jj in 1:length(edgeDims) if jj!=i]
+            selectdim(AMat, j, 1) ./= 2.0
+            selectdim(AMat, j, edgeDims[j]) ./= 2.0
+        end
+        append!(Aperpvec, reshape(AMat, nEdgesi))
+    end
+    Aperpₑ   = spdiagm(Aperpvec) 
+    return Aperpₑ
 end
 
 function setBoundaryEdgesToZero(dims)

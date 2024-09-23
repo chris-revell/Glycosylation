@@ -124,6 +124,7 @@ function derivedParameterNoChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁,
     return Dict("𝓔"=>𝓔, "K₃"=>K₃, "K₄"=>K₄, "δ_C"=>δ_C, "δ_S"=>δ_S, "Tᵣ"=>Tᵣ, "Ω"=>Ω, "α_C"=>α_C, "α_S"=>α_S, "C_b"=>C_b, "S_b"=>S_b, "C_0"=>C_0, "S_0"=>S_0, "K₂"=>K₂, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β, "K₂"=>K₂, "L₀"=>L₀)
 end 
 
-export derivedParameterChecks, derivedParameterNoChecks
+export derivedParameterChecks
+export derivedParameterNoChecks
 
 end

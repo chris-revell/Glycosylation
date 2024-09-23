@@ -51,6 +51,7 @@ using Statistics
 # @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 # @from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
+@from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
 
 
 function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
@@ -83,24 +84,27 @@ function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_
 
     h₀ = mean(selectdim(mat_h, 1, 1))
 
-    𝓔    = 2*Ωperp*E_0   # Total enzyme mass
-    K₃   = k₃/k₁    # Non-dimensionalised product formation rate
-    K₄   = k₄/k₁    # Non-dimensionalised prodict dissociation rate
-    δ_C  = π*D_C/(k₁*𝓔)
-    δ_S  = π*D_S/(k₁*𝓔)
-    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
-    Ω    = h₀*Ωperp         # Lumen volume
-    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Balance of complex in bulk to complex on membrane       units of m²?
-    α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Balance of substrate in bulk to substrate on membrane   units of m²?
-    C_b  = 𝓒/Ω 
-    S_b  = 𝓢/Ω 
-    C_0  = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
-    S_0  = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
-    K₂   = k₂/(k₁*C_0)              # (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
-    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-    ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
-    𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)
-    β    = N*(σ*K₃ - K₂*K₄)
+    # 𝓔    = 2*Ωperp*E_0   # Total enzyme mass
+    # K₃   = k₃/k₁    # Non-dimensionalised product formation rate
+    # K₄   = k₄/k₁    # Non-dimensionalised prodict dissociation rate
+    # δ_C  = π*D_C/(k₁*𝓔)
+    # δ_S  = π*D_S/(k₁*𝓔)
+    # Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
+    # Ω    = h₀*Ωperp         # Lumen volume
+    # α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Balance of complex in bulk to complex on membrane       units of m²?
+    # α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Balance of substrate in bulk to substrate on membrane   units of m²?
+    # C_b  = 𝓒/Ω 
+    # S_b  = 𝓢/Ω 
+    # C_0  = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
+    # S_0  = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
+    # K₂   = k₂/(k₁*C_0)              # (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
+    # σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+    # ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
+    # 𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)
+    # β    = N*(σ*K₃ - K₂*K₄)
+
+    derivedParams = derivedParameterNoChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
+    @unpack 𝓔, K₃, K₄, δ_C, δ_S, Tᵣ, Ω, α_C, α_S, C_b, S_b, C_0, S_0, K₂, σ, ϵ, 𝓓, β, K₂, L₀ = derivedParams 
 
     λ = (𝓢/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
     @show λ
@@ -128,7 +132,7 @@ function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_
     Pxy  = ghostEdgeMaskSparse*spdiagm(vcat(zeros(Int64, dimEdgeCount[1]), ones(Int64, sum(dimEdgeCount[2:end]))))   # Diagonal sparse matrix to exclude all ν edges 
 
     # Weights
-    W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
+    W   = vertexVolumeWeightsMatrix(dimsPlus, spacing)
     W⁻¹ =  vertexVolumeWeightsInverseMatrix(dimsPlus, spacing)
     l⁻¹ = edgeLengthInverseMatrix(dimsPlus, spacing)
 
@@ -155,7 +159,7 @@ function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_
     u0fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
     uMat = zeros(Float64, dimsPlus...)
     for ind in CartesianIndices(uMat)
-        uMat[ind] = u0fun([νs[ind[1]]], [0.0,], [νMax/10.0])
+        uMat[ind] = u0fun([νs[ind[1]]], [0.0], [νMax/10.0])
     end
     u0 = reshape(uMat, nVerts)
     u0[ghostVertexMaskVec.!=true] .= 0.0
