@@ -107,12 +107,11 @@ end
 spacing = [1.0/(Ngrid-1), xs[2]-xs[1]]
 
 W = vertexVolumeWeightsMatrix(dims, spacing)
-ghostVertexMaskVec = makeGhostVertexMask(dims)
 fig = Figure(size=(500,500))
 ax1 = Axis(fig[1,1])
 Pstars = Float64[]
 for i=1:length(sols)
-    push!(Pstars, P_star(sols[i][end], W, ghostVertexMaskVec, [Ngrid, Ngrid], hᵥs[i], ϕ, α_Cs[i], C_bs[i], Ωs[i], spacing[1], Tᵣstar))
+    push!(Pstars, P_star(sols[i][end], W, [Ngrid, Ngrid], hᵥs[i], ϕ, α_Cs[i], C_bs[i], Ωs[i], spacing[1], Tᵣstar))
 end
 lines!(ax1, h₀s, Pstars)
 ax1.xlabel = "h₀"

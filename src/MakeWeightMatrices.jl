@@ -10,17 +10,6 @@ using SparseArrays
 using LinearAlgebra
 using InvertedIndices
 
-# function solChecks(sol, W, ghostVertexMaskSparse)
-#     mass1 = sum((W*sol.u[1])[ghostVertexMaskSparse])
-#     massEnd = sum((W*sol.u[end])[ghostVertexMaskSparse])
-#     @show mass1
-#     @show massEnd
-#     minima = [minimum(u[ghostVertexMaskSparse]) for u in sol.u]
-#     all_t_min = minimum(minima)
-#     @show all_t_min
-#     return nothing
-# end
-
 function solChecks(sol, W)
     mass1 = sum(W*sol.u[1])
     massEnd = sum(W*sol.u[end])

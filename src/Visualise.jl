@@ -63,10 +63,10 @@ function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dims, vertexWeightsMatrix
     return nothing
 end
 
-function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, ghostVertexMaskVec, vertexWeightsMatrix; subFolder="", folderName="")
+function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, vertexWeightsMatrix; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
 
-    uInternal = reshape((vertexWeightsMatrix*solu[end])[ghostVertexMaskVec], dims...)
+    uInternal = reshape((vertexWeightsMatrix*solu[end]), dims...)
     MsInternal = sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
     globalmax = maximum(MsInternal)
 
@@ -79,7 +79,7 @@ function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, ghostVertexMaskVec, ve
     
     heatmap!(ax, M, colorrange=(0.0, globalmax), colormap=:inferno)
     record(fig, datadir("sims",subFolder,folderName,"productionHeatmap.mp4"), 1:length(solu); framerate=10) do i
-        uInternal .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dims)
+        uInternal .= reshape((vertexWeightsMatrix*solu[i]), dims)
         MsInternal .= sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
         M[] .= MsInternal[1,:,:]
         M[] = M[]

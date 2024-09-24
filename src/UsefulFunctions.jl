@@ -28,22 +28,22 @@ function updateOperator!(L, u, p, t)
 end
 
 # Integral of h*C over space 
-function M_tilde(u, W, ghostVertexMaskVec, dims, dν, hᵥ)
-    uInternal = reshape((W*hᵥ*u)[ghostVertexMaskVec], dims...)
+function M_tilde(u, W, dims, dν, hᵥ)
+    uInternal = reshape(W*hᵥ*u, dims...)
     M_tilde = sum(uInternal, dims=(2:length(dims)))
     return M_tilde./dν
 end
 
 # Dimensional bulk functional mass integrated over space and polymerisation 
-function M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)
-    uInternal = reshape((W*hᵥ*u)[ghostVertexMaskVec], dims...)
-    M̃ = M_tilde(u, W, ghostVertexMaskVec, dims, dν, hᵥ)
+function M_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)
+    uInternal = reshape(W*hᵥ*u, dims...)
+    M̃ = M_tilde(u, W, dims, dν, hᵥ)
     Mϕ = dν*sum(M̃[round(Int, ϕ*dims[1]) : dims[1]])
     prefactor = α_C*C_b*Ω/(π*(1+α_C))
     return prefactor*Mϕ
 end
 
-P_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, ghostVertexMaskVec, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)/Tᵣstar
+P_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)/Tᵣstar
 
 function 𝓟starUniform(ϕ, 𝓒, 𝓢, E_0, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
     𝓔    = 2*Ωperp*E_0

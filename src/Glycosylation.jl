@@ -101,12 +101,6 @@ function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Ωperp, N, k_Cd, k_Ca
     end
     nEdges  = sum(dimEdgeCount)   # Total number of edges over all dimensions 
 
-    # Ghost point masks
-    # ghostVertexMaskVec = makeGhostVertexMask(dims)
-    # ghostVertexMaskSparse = spdiagm(ghostVertexMaskVec)
-    # ghostEdgeMaskVec = makeGhostEdgeMask(dims)
-    # ghostEdgeMaskSparse = spdiagm(ghostEdgeMaskVec)
-
     # Matrices for picking out ν and xy directions in derivatives 
     Pν  = spdiagm(vcat(ones(Int64, dimEdgeCount[1]), zeros(Int64, sum(dimEdgeCount[2:end]))))   # Diagonal sparse matrix to exclude all xy edges 
     Pxy  = spdiagm(vcat(zeros(Int64, dimEdgeCount[1]), ones(Int64, sum(dimEdgeCount[2:end]))))   # Diagonal sparse matrix to exclude all ν edges 
@@ -145,7 +139,7 @@ function glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Ωperp, N, k_Cd, k_Ca
     #     selectdim(νMat, 1, ii) .*= (ii-1)
     # end
     # νSparse = spdiagm(reshape(νMat, nVerts))
-    # integ = sum(ghostVertexMaskSparse*W*νSparse*u0)
+    # integ = sum(W*νSparse*u0)
     # u0 .*= 𝓒/integ
 
     # Set value of Fₑ at each point in space
