@@ -1,7 +1,7 @@
 
 using FromFile
 
-@from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
+@from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
 h₀    = 0.1
 Ωperp = 100.0  # Lumen footprint area
@@ -22,4 +22,4 @@ D_S   = 0.01  # Substrate diffusivity
 Tᵣstar= 10.0  # Release time
 ϕ     = 0.5
 
-params = derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
+params = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)

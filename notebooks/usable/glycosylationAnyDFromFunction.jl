@@ -44,10 +44,10 @@ using Dates
 @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
-@from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
+@from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
 
-nSpatialDims = 2
+nSpatialDims = 1
 
 h₀ = 0.2
 
@@ -66,38 +66,36 @@ E_0   = 0.001
 𝓢     = 10000.0
 D_C   = 0.01  # Monomer/polymer diffusivity
 D_S   = 0.01  # Substrate diffusivity
-Tᵣstar= 250.0  # Release time
+Tᵣstar= 400.0  # Release time
 ϕ     = 0.5
 
-Nghost= 1           # Number of ghost points on each side of the domain 
 Ngrid = 51
 
 xMax = 100.0
 xs   = collect(range(0.0, xMax, Ngrid)) # Positions of discretised vertices in space
 mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
 
-Nνplus   = Ngrid
-Nxplus   = Ngrid
-Nyplus   = Ngrid
-nSpatialDims == 1 ? dimsPlus = [Nνplus, Nxplus] : dimsPlus = [Nνplus, Nxplus, Nyplus]
-nSpatialDims == 1 ? dimsReal = [Ngrid, Ngrid] : dimsReal = [Ngrid, Ngrid, Ngrid]
+Nν   = Ngrid
+Nx   = Ngrid
+Ny   = Ngrid
+nSpatialDims == 1 ? dims = [Nν, Nx] : dims = [Nν, Nx, Ny]
 dx   = xs[2]-xs[1]
 if nSpatialDims > 1 
     yMax = xMax
-    ys   = collect(range(0.0, yMax, Nyplus))
+    ys   = collect(range(0.0, yMax, Ny))
     dy   = ys[2]-ys[1]
 end
 νMax = 1.0
-νs   = collect(range(0.0, νMax, Nνplus)) # Positions of discretised vertices in polymerisation space 
+νs   = collect(range(0.0, νMax, Nν)) # Positions of discretised vertices in polymerisation space 
 dν   = νs[2]-νs[1]
 nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 
-derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
+derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
 
 #%%
 
-sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
-                       
+sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+                 
 println("finished sim")
 
 #%%
@@ -109,14 +107,11 @@ folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 subFolder = ""
 mkpath(datadir("sims",subFolder,folderName))
 
-W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
+W = vertexVolumeWeightsMatrix(dims, spacing)
 
 if nSpatialDims==1
-    concentrationSurfaceMovie(sol.u, sol.t, dimsReal; subFolder="", folderName=folderName)
+    concentrationSurfaceMovie(sol.u, sol.t, dims; subFolder="", folderName=folderName)
 else
-    # uMats = [reshape(u, dimsPlus...) for u in sol.u]
-    # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]
-    # concentrationSurfaceMovie([reshape(u, Nνplus*Nxplus) for u in uSlices], sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
 end
 

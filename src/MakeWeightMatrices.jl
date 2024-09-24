@@ -35,11 +35,11 @@ end
 
 # Matrices for picking out ν and xy directions in derivatives 
 # Matrix of i-directed edge accessibility
-# P_i = ones(Nxplus-1, Nνplus); P_i[:, 1] .= 0.0; P_i[:, end] .= 0.0; P_i[1, :] .= 0.0; P_i[end, :] .= 0.0
+# P_i = ones(Nx-1, Nν); P_i[:, 1] .= 0.0; P_i[:, end] .= 0.0; P_i[1, :] .= 0.0; P_i[end, :] .= 0.0
 # # Matrix of j-directed edge accessibility  
-# P_j = ones(Nxplus, Nνplus-1); P_j[:, 1] .= 0.0; P_j[:, end] .= 0.0; P_j[1, :] .= 0.0; P_j[end, :] .= 0.0
+# P_j = ones(Nx, Nν-1); P_j[:, 1] .= 0.0; P_j[:, end] .= 0.0; P_j[1, :] .= 0.0; P_j[end, :] .= 0.0
 # # Matrix of k-directed edge accessibility  
-# P_j = ones(Nxplus, Nνplus-1); P_j[:, 1] .= 0.0; P_j[:, end] .= 0.0; P_j[1, :] .= 0.0; P_j[end, :] .= 0.0
+# P_j = ones(Nx, Nν-1); P_j[:, 1] .= 0.0; P_j[:, end] .= 0.0; P_j[1, :] .= 0.0; P_j[end, :] .= 0.0
 # P = dropzeros(spdiagm(vcat(reshape(P_i, nEdgesi), reshape(P_j, nEdgesj)))) # Diagonal sparse matrix to exclude all edges adjacent to ghost points  
 # Pν = dropzeros(spdiagm(vcat(zeros(nEdgesi), reshape(P_j, nEdgesj)))) # Diagonal sparse matrix to exclude all xy edges and ν edges adjacent to ghost points  
 # Pxy = dropzeros(spdiagm(vcat(reshape(P_i, nEdgesi), zeros(nEdgesj)))) # Diagonal sparse matrix to exclude all ν edges and xy edges adjacent to ghost points 
@@ -49,20 +49,20 @@ end
 # is true if vertex i in the flattened vector of vertices is an internal vertex
 # but false if vertex i is a ghost vertex in the flattened vector of vertices 
 # This can be used to exclude ghost points from calculations over the whole state vector
-function makeGhostVertexMask(dimsPlus)
-    ghostMaskVertex = fill(true, dimsPlus...)
-    for i=1:length(dimsPlus)
+function makeGhostVertexMask(dims)
+    ghostMaskVertex = fill(true, dims...)
+    for i=1:length(dims)
         selectdim(ghostMaskVertex, i, 1) .= false
-        selectdim(ghostMaskVertex, i, dimsPlus[i]) .= false
+        selectdim(ghostMaskVertex, i, dims[i]) .= false
     end
-    # ghostMaskVertex = spdiagm(reshape(ghostMaskVertex, prod(dimsPlus)))
-    return reshape(ghostMaskVertex, prod(dimsPlus))
+    # ghostMaskVertex = spdiagm(reshape(ghostMaskVertex, prod(dims)))
+    return reshape(ghostMaskVertex, prod(dims))
 end
 
-function makeGhostEdgeMask(dimsPlus)
+function makeGhostEdgeMask(dims)
     ghostMaskEdge = Bool[]
-    for i=1:length(dimsPlus)
-        dimsVec_i = copy(dimsPlus)
+    for i=1:length(dims)
+        dimsVec_i = copy(dims)
         dimsVec_i[i] = dimsVec_i[i]-1
         nEdgesi = prod(dimsVec_i)
         l_i = fill(true, dimsVec_i...)
@@ -77,37 +77,37 @@ function makeGhostEdgeMask(dimsPlus)
 end
 
 
-# function makeGhostEdgeMaskNew(dimsPlus)
+# function makeGhostEdgeMaskNew(dims)
 #     dimEdgeCount = Int64[]
-#     for i=1:length(dimsPlus)
-#         push!(dimEdgeCount, (dimsPlus[i]-1)*prod(dimsPlus[Not(i)]))
+#     for i=1:length(dims)
+#         push!(dimEdgeCount, (dims[i]-1)*prod(dims[Not(i)]))
 #     end
 #     nEdges  = sum(dimEdgeCount)
 
 #     ghostEdgeMaskVec = fill(true, nEdges)
 
-#     dimEdgeArrayStrides = (1, (dimsPlus[1]-1), (dimsPlus[1]-1)*dimsPlus[2])
-#     for kk=1:dimsPlus[3]
-#         for jj=1:dimsPlus[2]
-#             for ii in [1,(dimsPlus[1]-1)]
+#     dimEdgeArrayStrides = (1, (dims[1]-1), (dims[1]-1)*dims[2])
+#     for kk=1:dims[3]
+#         for jj=1:dims[2]
+#             for ii in [1,(dims[1]-1)]
 #                 edgeIndex = 1 + (ii-1)*dimEdgeArrayStrides[1] + (jj-1)*dimEdgeArrayStrides[2] + (kk-1)*dimEdgeArrayStrides[3]
 #                 ghostEdgeMaskVec[edgeIndex] = false
 #             end
 #         end
 #     end  
-#     dimEdgeArrayStrides = (1, dimsPlus[1], dimsPlus[1]*(dimsPlus[2]-1))
-#     for kk=1:dimsPlus[3]
-#         for jj in [1,(dimsPlus[2]-1)]
-#             for ii=1:dimsPlus[1]
+#     dimEdgeArrayStrides = (1, dims[1], dims[1]*(dims[2]-1))
+#     for kk=1:dims[3]
+#         for jj in [1,(dims[2]-1)]
+#             for ii=1:dims[1]
 #                 edgeIndex = dimEdgeCount[1] + 1 + (ii-1)*dimEdgeArrayStrides[1] + (jj-1)*dimEdgeArrayStrides[2] + (kk-1)*dimEdgeArrayStrides[3]
 #                 ghostEdgeMaskVec[edgeIndex] = false
 #             end
 #         end
 #     end  
-#     dimEdgeArrayStrides = (1, dimsPlus[1], dimsPlus[1]*dimsPlus[2])
-#     for kk in [1,(dimsPlus[3]-1)]
-#         for jj=1:dimsPlus[2]
-#             for ii=1:dimsPlus[1]
+#     dimEdgeArrayStrides = (1, dims[1], dims[1]*dims[2])
+#     for kk in [1,(dims[3]-1)]
+#         for jj=1:dims[2]
+#             for ii=1:dims[1]
 #                 edgeIndex = dimEdgeCount[1] + dimEdgeCount[2] + 1 + (ii-1)*dimEdgeArrayStrides[1] + (jj-1)*dimEdgeArrayStrides[2] + (kk-1)*dimEdgeArrayStrides[3]
 #                 ghostEdgeMaskVec[edgeIndex] = false
 #             end
@@ -219,7 +219,7 @@ end
 
 # # Diagonal matrix of volumes around each edge, divided by 2 at the periphery
 # # Matrix of i-directed edge weights  
-# F_i = fill(dx*dy*dν, (Nxplus-1, Nyplus, Nνplus))
+# F_i = fill(dx*dy*dν, (Nx-1, Ny, Nν))
 # F_i[:, :, 1] ./= 2.0
 # F_i[:, :, end] ./= 2.0
 # F_i[:, 1, :] ./= 2.0
@@ -227,7 +227,7 @@ end
 # F_i[1, :, :] ./= 2.0
 # F_i[end, :, :] ./= 2.0
 # # Matrix of j-directed edge weights  
-# F_j = fill(dx*dy*dν, (Nxplus, Nyplus-1, Nνplus))
+# F_j = fill(dx*dy*dν, (Nx, Ny-1, Nν))
 # F_j[:, :, 1] ./= 2.0
 # F_j[:, :, end] ./= 2.0
 # F_j[:, 1, :] ./= 2.0
@@ -235,7 +235,7 @@ end
 # F_j[1, :, :] ./= 2.0
 # F_j[end, :, :] ./= 2.0
 # # Matrix of k-directed edge weights  
-# F_k = fill(dx*dy*dν, (Nxplus, Nyplus, Nνplus-1))
+# F_k = fill(dx*dy*dν, (Nx, Ny, Nν-1))
 # F_k[:, :, 1] ./= 2.0
 # F_k[:, :, end] ./= 2.0
 # F_k[:, 1, :] ./= 2.0
@@ -249,12 +249,12 @@ end
 # For creating velocity field, diffusivity field, etc with peripheral edges set to zero
 # function dimensionSpecificEdgeWeights
 #     # Velocity field 
-#     V_i = fill(0.0, (Nxplus-1, Nyplus, Nνplus))
-#     V_j = fill(0.0, (Nxplus, Nyplus-1, Nνplus))
-#     V_k = fill(0.0, (Nxplus, Nyplus, Nνplus-1))
-#     for k=2:Nνplus-2
-#         for j=2:Nyplus-1
-#             for i=2:Nxplus-1
+#     V_i = fill(0.0, (Nx-1, Ny, Nν))
+#     V_j = fill(0.0, (Nx, Ny-1, Nν))
+#     V_k = fill(0.0, (Nx, Ny, Nν-1))
+#     for k=2:Nν-2
+#         for j=2:Ny-1
+#             for i=2:Nx-1
 #                 V_k[i,j,k] = β/(1+α*hFun(xs[i], 0.5, 0.1, ys[j], 0.5, 0.1))
 #             end
 #         end
@@ -264,26 +264,26 @@ end
 
 # # Diffusivity field over edges 
 # # Set no-flux boundary conditions by enforcing zero diffusivity in edges connection ghost points
-# D_i = fill(0.0, (Nxplus-1, Nyplus, Nνplus))
-# D_j = fill(0.0, (Nxplus, Nyplus-1, Nνplus))
-# D_k = fill(0.0, (Nxplus, Nyplus, Nνplus-1))
-# for k=2:Nνplus-2
-#     for j=2:Nyplus-1
-#         for i=2:Nxplus-1
+# D_i = fill(0.0, (Nx-1, Ny, Nν))
+# D_j = fill(0.0, (Nx, Ny-1, Nν))
+# D_k = fill(0.0, (Nx, Ny, Nν-1))
+# for k=2:Nν-2
+#     for j=2:Ny-1
+#         for i=2:Nx-1
 #             D_k[i,j,k] = 0.11 #dx*dy*K₂*K₄/(1+α*hFun(xs[i], 0.5, 0.1, ys[j], 0.5, 0.1))
 #         end
 #     end
 # end
-# for k=2:Nνplus-1
-#     for j=2:Nyplus-2
-#         for i=2:Nxplus-1
+# for k=2:Nν-1
+#     for j=2:Ny-2
+#         for i=2:Nx-1
 #             D_j[i,j,k] = 0.12 #dx*dν*K₂*K₄/(1+α*hFun(xs[i], 0.5, 0.1, ys[j], 0.5, 0.1))
 #         end
 #     end
 # end
-# for k=2:Nνplus-1
-#     for j=2:Nyplus-1
-#         for i=2:Nxplus-2
+# for k=2:Nν-1
+#     for j=2:Ny-1
+#         for i=2:Nx-2
 #             D_i[i,j,k] = 0.13 #dy*dν*K₂*K₄/(1+α*hFun(xs[i], 0.5, 0.1, ys[j], 0.5, 0.1))
 #         end
 #     end

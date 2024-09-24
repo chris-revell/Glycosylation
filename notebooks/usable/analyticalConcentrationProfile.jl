@@ -5,7 +5,7 @@ using CairoMakie
 using UnPack 
 
 # @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
-@from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
+@from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
 function homogeneousWidthC(ν, t̃, h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
     params = derivedParameterNoChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
@@ -40,11 +40,10 @@ D_S   = 0.0001  # Substrate diffusivity
 Tᵣstar= 100.0  # Release time
 ϕ     = 0.5
 
-Nghost= 1           # Number of ghost points on each side of the domain 
 Ngrid = 51
 
 xMax = 100.0
-xs   = collect(range(0.0, xMax, Ngrid+2*Nghost)) # Positions of discretised vertices in space
+xs   = collect(range(0.0, xMax, Ngrid)) # Positions of discretised vertices in space
 
 # h₀s = collect(0.1:0.1:3.0)
 h₀s = collect(0.001:0.02:0.2001)
@@ -52,7 +51,7 @@ h₀s = collect(0.001:0.02:0.2001)
 νs = collect(0.00:0.001:1.0)
 t̃ = 100.0
 
-params = derivedParameterChecks(h₀s[1], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
+params = derivedParameters(h₀s[1], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
 
 Cs = homogeneousWidthC.(νs, t̃, h₀s[1], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
 

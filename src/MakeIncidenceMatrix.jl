@@ -32,12 +32,12 @@ end
 # A[1:nEdgesj, :] corresponds to i directed edges
 # A[1:nEdgesk, :] corresponds to i directed edges
 # Vertices and edges in each direction ordered in 1D vector as per julia system data layout
-function makeIncidenceMatrix3D(dimsPlus)
+function makeIncidenceMatrix3D(dims)
 
-    if length(dimsPlus) == 3
-        ni, nj, nk = dimsPlus
-    elseif length(dimsPlus) == 2
-        ni, nj= dimsPlus
+    if length(dims) == 3
+        ni, nj, nk = dims
+    elseif length(dims) == 2
+        ni, nj= dims
         nk = 1
     end
 

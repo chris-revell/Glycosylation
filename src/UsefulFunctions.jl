@@ -6,24 +6,24 @@ using SparseArrays
 using UnPack
 
 # Integrate over ν to find E field in spatial dimensions.
-# When state vector u is reshaped to an array with shape dimsPlus, assume ν is the first dimension of this array
-# Function is agnostic about the whether dimsPlus is of length 2 or 3.
-function E!(u, dimsPlus, Esparse, matE, matFₑ, K₂, dν)
+# When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
+# Function is agnostic about the whether dims is of length 2 or 3.
+function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
     # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
-    # cs = selectdim(reshape(u, dimsPlus...), 1, 2:(dimsPlus[1]-1))
-    uMat = reshape(u, dimsPlus...)
-    integ = 0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dimsPlus[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dimsPlus[1])
+    # cs = selectdim(reshape(u, dims...), 1, 2:(dims[1]-1))
+    uMat = reshape(u, dims...)
+    integ = 0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1])
     for slice in eachslice(matE, dims=1)
         slice .= matFₑ.*(K₂./(K₂ .+ integ))
     end
-    Esparse[diagind(Esparse)] .= reshape(matE, prod(dimsPlus))
+    Esparse[diagind(Esparse)] .= reshape(matE, prod(dims))
     return nothing
 end
 
 # Function to update linear operator with new values for E at each iteration in solving the ODE system
 function updateOperator!(L, u, p, t)
-    @unpack L1, L2, u0, dimsPlus, Esparse, matE, matFₑ, K₂, dν = p
-    E!(u, dimsPlus, Esparse, matE, matFₑ, K₂, dν)
+    @unpack L1, L2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
+    E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
     L .= Esparse*L1 .+ L2
 end
 

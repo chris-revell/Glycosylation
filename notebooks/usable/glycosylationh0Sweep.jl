@@ -45,7 +45,7 @@ using CairoMakie
 @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
-@from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
+@from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
 nSpatialDims = 1
 
@@ -67,11 +67,15 @@ D_S   = 0.01  # Substrate diffusivity
 Tᵣstar= 100.0  # Release time
 ϕ     = 0.5
 
-Nghost= 1           # Number of ghost points on each side of the domain 
 Ngrid = 51
+Nν   = Ngrid
+Nx   = Ngrid
+Ny   = Ngrid
+nSpatialDims == 1 ? dims = [Nν, Nx] : dims = [Nν, Nx, Ny]
 
 xMax = 100.0
-xs   = collect(range(0.0, xMax, Ngrid+2*Nghost)) # Positions of discretised vertices in space
+
+xs   = collect(range(0.0, xMax, Ngrid)) # Positions of discretised vertices in space
 
 # h₀s = collect(0.1:0.1:3.0)
 h₀s = collect(0.001:0.02:0.2001)
@@ -85,25 +89,25 @@ C_bs =[]
 for h₀ in h₀s
     @show h₀
 
-    mat_h = h₀.*ones(fill(Ngrid+2*Nghost, nSpatialDims+1)...)
+    mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
 
-    sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Nghost, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
+    sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
     push!(sols, sol)
     Ω    = h₀*Ωperp
     push!(Ωs, Ω)
     α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
     push!(α_Cs, α_C)
-    hᵥ_vec = reshape(mat_h, (Ngrid+2*Nghost)^(nSpatialDims+1))
+    hᵥ_vec = reshape(mat_h, (Ngrid)^(nSpatialDims+1))
     hᵥ = spdiagm(hᵥ_vec)
     push!(hᵥs, hᵥ)
     C_b  = 𝓒/Ω 
     push!(C_bs, C_b)
 end
 
-dimsPlus = fill(Ngrid+2*Nghost, nSpatialDims+1)
-spacing = [1.0/(Ngrid+Nghost), xs[2]-xs[1]]
-W = vertexVolumeWeightsMatrix(dimsPlus, spacing)
-ghostVertexMaskVec = makeGhostVertexMask(dimsPlus)
+spacing = [1.0/(Ngrid-1), xs[2]-xs[1]]
+
+W = vertexVolumeWeightsMatrix(dims, spacing)
+ghostVertexMaskVec = makeGhostVertexMask(dims)
 fig = Figure(size=(500,500))
 ax1 = Axis(fig[1,1])
 Pstars = Float64[]
@@ -130,24 +134,4 @@ display(fig)
 # save("simulationPvsh.png",fig)
 
 
-
-
-#%%
-
-
-
-
-
-
-
-
-# if nSpatialDims==1
-#     ghostVertexMaskVec = makeGhostVertexMask(fill(Ngrid+2*Nghost, 2))
-#     concentrationSurfaceMovie(sol.u, sol.t, fill(Ngrid,2), Nghost, ghostVertexMaskVec; subFolder="", folderName=folderName)
-# else
-#     # uMats = [reshape(u, dimsPlus...) for u in sol.u]
-#     # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]
-#     # concentrationSurfaceMovie([reshape(u, Nνplus*Nxplus) for u in uSlices], sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
-#     spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
-# end
 

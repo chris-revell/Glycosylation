@@ -1,5 +1,5 @@
 
-module DerivedParameterChecks
+module DerivedParameters
 
 # h₀    = 0.1
 # Ωperp = 100.0  # Lumen footprint area
