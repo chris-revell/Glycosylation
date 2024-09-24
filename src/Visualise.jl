@@ -10,7 +10,7 @@ using FromFile
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 
 # function concentrationSurfaceMovie(solu, ts, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName="") 
-function concentrationSurfaceMovie(solu, ts, dimsReal, Nghost, ghostVertexMaskVec; subFolder="", folderName="") 
+function concentrationSurfaceMovie(solu, ts, dimsReal; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
     fig = Figure(size=(1000,1000))
     ax = Axis3(fig[1, 1], aspect=:equal, azimuth=-π/4)
@@ -18,29 +18,28 @@ function concentrationSurfaceMovie(solu, ts, dimsReal, Nghost, ghostVertexMaskVe
     ax.ylabel = "x"
     ax.zlabel = "c"
     uInternal = Observable(zeros(dimsReal...))
-    globalmin = minimum([minimum(u[ghostVertexMaskVec]) for u in solu])
-    globalmax = maximum([maximum(u[ghostVertexMaskVec]) for u in solu])
+    globalmin = minimum([minimum(u) for u in solu])
+    globalmax = maximum([maximum(u) for u in solu])
     zlims!(ax, (globalmin, globalmax))
     clims = (globalmin,globalmax)
-    # surface!(ax, xs[Nghost+1:end-Nghost], νs[Nghost+1:end-Nghost], uInternal, colorrange=clims, colormap=:batlow)
     surface!(ax, uInternal, colorrange=clims, colormap=:batlow)
     record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(ts); framerate=10) do i
-        uInternal[] .= reshape(solu[i][ghostVertexMaskVec], dimsReal...)
+        uInternal[] .= reshape(solu[i], dimsReal...)
         uInternal[] = uInternal[]
     end
     return nothing 
 end
 
-function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dimsReal, Nghost, vertexWeightsMatrix, ghostVertexMaskVec; subFolder="", folderName="")
+function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dimsReal, Nghost, vertexWeightsMatrix; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
     dν = νs[3]-νs[2]
     # Find limits
-    uReshaped = reshape((vertexWeightsMatrix*solu[end])[ghostVertexMaskVec], dimsReal...)
+    uReshaped = reshape((vertexWeightsMatrix*solu[end]), dimsReal...)
     M = sum(uReshaped, dims=(2,3))
     minima = Float64[]
     maxima = Float64[]
     for i=1:length(ts)
-        uReshaped .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dimsReal...)
+        uReshaped .= reshape((vertexWeightsMatrix*solu[i]), dimsReal...)
         M .= sum(uReshaped, dims=(2,3))./dν
         push!(minima, minimum(M))
         push!(maxima, maximum(M))
@@ -54,10 +53,10 @@ function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dimsReal, Nghost, vertexW
     ax.ylabel = "M, ∱cdxdy"
     ax.title = "Integral of Cₛ over space against ν"
     M = Observable(zeros(dimsReal[1]))
-    lines!(ax, νs[2:end-1], M)
+    lines!(ax, νs, M)
     ylims!(ax, (globalmin, globalmax))
     record(fig, datadir("sims",subFolder, folderName, "spaceIntegralOver_ν_Movie.mp4"), 1:length(ts); framerate=10) do i
-        uReshaped .= reshape((vertexWeightsMatrix*solu[i])[ghostVertexMaskVec], dimsReal...)
+        uReshaped .= reshape((vertexWeightsMatrix*solu[i]), dimsReal...)
         M[] .= dropdims((sum(uReshaped, dims=(2,3))), dims=Tuple(collect(2:ndims(uReshaped))))./dν
         M[] = M[]
     end

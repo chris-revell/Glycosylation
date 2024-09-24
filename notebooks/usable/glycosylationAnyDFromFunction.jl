@@ -47,9 +47,9 @@ using Dates
 @from "$(srcdir("DerivedParameterChecks.jl"))" using DerivedParameterChecks
 
 
-nSpatialDims = 1
+nSpatialDims = 2
 
-h₀ = 0.02
+h₀ = 0.2
 
 Ωperp = 100.0  # Lumen footprint area
 N     = 100         # Maximum polymer length 
@@ -66,19 +66,19 @@ E_0   = 0.001
 𝓢     = 10000.0
 D_C   = 0.01  # Monomer/polymer diffusivity
 D_S   = 0.01  # Substrate diffusivity
-Tᵣstar= 100.0  # Release time
+Tᵣstar= 250.0  # Release time
 ϕ     = 0.5
 
 Nghost= 1           # Number of ghost points on each side of the domain 
 Ngrid = 51
 
 xMax = 100.0
-xs   = collect(range(0.0, xMax, Ngrid+2*Nghost)) # Positions of discretised vertices in space
-mat_h = h₀.*ones(fill(Ngrid+2*Nghost, nSpatialDims+1)...)
+xs   = collect(range(0.0, xMax, Ngrid)) # Positions of discretised vertices in space
+mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
 
-Nνplus   = Ngrid+2*Nghost # Number of discretised points including ghost points 
-Nxplus   = Ngrid+2*Nghost # Number of discretised points including ghost points
-Nyplus   = Ngrid+2*Nghost # Number of discretised points including ghost points
+Nνplus   = Ngrid
+Nxplus   = Ngrid
+Nyplus   = Ngrid
 nSpatialDims == 1 ? dimsPlus = [Nνplus, Nxplus] : dimsPlus = [Nνplus, Nxplus, Nyplus]
 nSpatialDims == 1 ? dimsReal = [Ngrid, Ngrid] : dimsReal = [Ngrid, Ngrid, Ngrid]
 dx   = xs[2]-xs[1]
@@ -92,7 +92,7 @@ end
 dν   = νs[2]-νs[1]
 nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 
-derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
+derivedParameterChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
 
 #%%
 
@@ -117,6 +117,6 @@ else
     # uMats = [reshape(u, dimsPlus...) for u in sol.u]
     # uSlices = [selectdim(u, 3, dimsPlus[3]÷2) for u in uMats]
     # concentrationSurfaceMovie([reshape(u, Nνplus*Nxplus) for u in uSlices], sol.t, xs, νs, dimsReal, Nghost, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W, ghostVertexMaskVec; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dimsReal, Nghost, W; subFolder=subFolder, folderName=folderName)
 end
 

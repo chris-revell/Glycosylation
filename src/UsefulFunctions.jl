@@ -10,10 +10,13 @@ using UnPack
 # Function is agnostic about the whether dimsPlus is of length 2 or 3.
 function E!(u, dimsPlus, Esparse, matE, matFₑ, K₂, dν)
     # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
-    cs = selectdim(reshape(u, dimsPlus...), 1, 2:(dimsPlus[1]-1))
-    # dν.*sum(cs[2:end-1,:], dims=1)[1,:] Gives integral of concentration over ν at each point in x
-    matE .= matFₑ.*(K₂./(K₂ .+ dν.*dropdims(sum(cs, dims=1), dims=1)))
-    Esparse[diagind(Esparse)] .= repeat(reshape(matE, prod(size(matE))), inner=dimsPlus[1])
+    # cs = selectdim(reshape(u, dimsPlus...), 1, 2:(dimsPlus[1]-1))
+    uMat = reshape(u, dimsPlus...)
+    integ = 0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dimsPlus[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dimsPlus[1])
+    for slice in eachslice(matE, dims=1)
+        slice .= matFₑ.*(K₂./(K₂ .+ integ))
+    end
+    Esparse[diagind(Esparse)] .= reshape(matE, prod(dimsPlus))
     return nothing
 end
 

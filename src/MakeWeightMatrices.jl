@@ -21,12 +21,12 @@ using InvertedIndices
 #     return nothing
 # end
 
-function solChecks(sol, W, ghostVertexMaskSparse)
-    mass1 = sum(ghostVertexMaskSparse*W*sol.u[1])
-    massEnd = sum(ghostVertexMaskSparse*W*sol.u[end])
+function solChecks(sol, W)
+    mass1 = sum(W*sol.u[1])
+    massEnd = sum(W*sol.u[end])
     @show mass1
     @show massEnd
-    minima = [minimum(ghostVertexMaskSparse*u) for u in sol.u]
+    minima = [minimum(u) for u in sol.u]
     all_t_min = minimum(minima)
     @show all_t_min
     return nothing
