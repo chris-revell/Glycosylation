@@ -92,10 +92,23 @@ function derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, 
         println("")
 
         println("σK₃ ∼ K₄ ∼ 1")
-        println("σK₃=$(σ*K₃), K₄=$(K₄)")
+        println("σK₃ = $(σ*K₃), K₄ = $(K₄)")
         printstyled("$(isapprox(σ*K₃, 1.0, rtol=0.1)), "; color = (isapprox(σ*K₃, 1.0, rtol=0.1) ? :green : :red))
         printstyled("$(isapprox(K₄, 1.0, rtol=0.1))"; color = (isapprox(K₄, 1.0, rtol=0.1) ? :green : :red))
         println("")
+
+        λ = (𝓢/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
+
+        println("λ > 1")
+        println("λ = $(λ)")
+        printstyled("$(λ>1)"; color = (λ>1) ? :green : :red)
+        println("")
+
+        println("h₀ < 2k_Sa(λ-1)/k_Sd")
+        println("h₀ = $(h₀), 2k_Sa(λ-1)/k_Sd = $(2.0*k_Sa*(λ-1)/k_Sd)")
+        printstyled("$(h₀<(2.0*k_Sa*(λ-1)/k_Sd))"; color = (h₀<(2.0*k_Sa*(λ-1)/k_Sd)) ? :green : :red)
+        println("")
+
     end
 
     return Dict("𝓔"=>𝓔, "K₃"=>K₃, "K₄"=>K₄, "δ_C"=>δ_C, "δ_S"=>δ_S, "Tᵣ"=>Tᵣ, "Ω"=>Ω, "α_C"=>α_C, "α_S"=>α_S, "C_b"=>C_b, "S_b"=>S_b, "C_0"=>C_0, "S_0"=>S_0, "K₂"=>K₂, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β, "K₂"=>K₂, "L₀"=>L₀)

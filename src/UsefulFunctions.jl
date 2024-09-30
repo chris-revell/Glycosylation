@@ -12,7 +12,7 @@ function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
     # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
     # cs = selectdim(reshape(u, dims...), 1, 2:(dims[1]-1))
     uMat = reshape(u, dims...)
-    integ = 0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1])
+    integ = dν.*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))
     for slice in eachslice(matE, dims=1)
         slice .= matFₑ.*(K₂./(K₂ .+ integ))
     end
@@ -22,9 +22,9 @@ end
 
 # Function to update linear operator with new values for E at each iteration in solving the ODE system
 function updateOperator!(L, u, p, t)
-    @unpack L1, L2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
+    @unpack Part1, Part2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
     E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
-    L .= Esparse*L1 .+ L2
+    L .= Esparse*Part1 .+ Part2
 end
 
 # Integral of h*C over space 
@@ -72,8 +72,8 @@ function homogeneousWidthC(ν̃, t̃, h₀, 𝓒, k_Ca, k_Cd, k_Sa, k_Sd, k₁, 
     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
     ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
     β    = N*(σ*K₃ - K₂*K₄)
-    Etilde = K₂/(1+K₂)
-    p1 = (1+α_C)/(π*Etilde*K₂*K₄*t̃)
+    Etilde = K₂/(π*(1+K₂))
+    p1 = (1+α_C)/(4*π*Etilde*K₂*K₄*t̃)
     p2 = ν̃*(1+α_C)-Etilde*β*t̃
     p3 = 4*Etilde*K₂*K₄*(1+α_C)*t̃
     return sqrt(p1)*exp(-p2^2/p3)

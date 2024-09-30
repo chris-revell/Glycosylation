@@ -39,6 +39,7 @@ using DrWatson
 using Printf
 using SciMLOperators
 using Dates
+using InvertedIndices
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("Visualise.jl"))" using Visualise
@@ -47,61 +48,92 @@ using Dates
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
 
+nSpatialDims = 2
+
+h₀ = 0.0001
+
+# Ωperp = 1.0  # Lumen footprint area
+# N     = 100         # Maximum polymer length 
+# k_Cd  = 3000.0 # Complex desorption rate
+# k_Ca  = 0.01 # Complex adsorption rate
+# k_Sd  = 1.0 # Substrate desorption rate
+# k_Sa  = 1.0 # Substrate adsorption rate
+# k₁    = 2.0   # Complex formation forward reaction rate 
+# k₂    = 0.01   # Complex dissociation reverse reaction rate 
+# k₃    = 0.01   # Product formation
+# k₄    = 2.0  # Product dissociation 
+# E_0   = 0.01
+# 𝓒     = 1.0
+# 𝓢     = 1000.0
+# D_C   = 0.000001  # Monomer/polymer diffusivity
+# D_S   = 0.000001  # Substrate diffusivity
+# Tᵣstar= 0.1  # Release time
+# ϕ     = 0.5
+
+# Ngrid = 11
 nSpatialDims = 1
 
-h₀ = 0.2
-
-Ωperp = 100.0  # Lumen footprint area
+Ωperp = 1.0  # Lumen footprint area
 N     = 100         # Maximum polymer length 
-k_Cd  = 2000.0 # Complex desorption rate
-k_Ca  = 2.0 # Complex adsorption rate
-k_Sd  = 20.0 # Substrate desorption rate
-k_Sa  = 1.1 # Substrate adsorption rate
-k₁    = 1.0   # Complex formation forward reaction rate 
-k₂    = 0.02   # Complex dissociation reverse reaction rate 
+k_Cd  = 3000.0 # Complex desorption rate
+k_Ca  = 0.01 # Complex adsorption rate
+k_Sd  = 1.0 # Substrate desorption rate
+k_Sa  = 1.0 # Substrate adsorption rate
+k₁    = 2.0   # Complex formation forward reaction rate 
+k₂    = 0.01   # Complex dissociation reverse reaction rate 
 k₃    = 0.01   # Product formation
-k₄    = 1.0  # Product dissociation 
-E_0   = 0.001
-𝓒     = 100.0
-𝓢     = 10000.0
-D_C   = 0.01  # Monomer/polymer diffusivity
-D_S   = 0.01  # Substrate diffusivity
-Tᵣstar= 400.0  # Release time
+k₄    = 2.0  # Product dissociation 
+E_0   = 0.01
+𝓒     = 1.0
+𝓢     = 1000.0
+D_C   = 0.000001  # Monomer/polymer diffusivity
+D_S   = 0.000001  # Substrate diffusivity
+Tᵣstar= 0.001  # Release time
 ϕ     = 0.5
 
-Ngrid = 51
+Ngrid = 101
+nSpatialDims == 1 ? dims  = [Ngrid, Ngrid] : dims  = [Ngrid, Ngrid, Ngrid]
+derivedParams = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
+@unpack 𝓔, K₃, K₄, δ_C, δ_S, Tᵣ, Ω, α_C, α_S, C_b, S_b, C_0, S_0, K₂, σ, ϵ, 𝓓, β, K₂, L₀ = derivedParams
+#%%
 
-xMax = 100.0
-xs   = collect(range(0.0, xMax, Ngrid)) # Positions of discretised vertices in space
-mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
-
-Nν   = Ngrid
-Nx   = Ngrid
-Ny   = Ngrid
-nSpatialDims == 1 ? dims = [Nν, Nx] : dims = [Nν, Nx, Ny]
+xMax = (Ωperp)^(1/nSpatialDims)
+xs   = collect(range(0.0, xMax, dims[2]))
 dx   = xs[2]-xs[1]
 if nSpatialDims > 1 
     yMax = xMax
-    ys   = collect(range(0.0, yMax, Ny))
+    ys   = collect(range(0.0, yMax, dims[3]))
     dy   = ys[2]-ys[1]
 end
 νMax = 1.0
-νs   = collect(range(0.0, νMax, Nν)) # Positions of discretised vertices in polymerisation space 
+νs   = collect(range(0.0, νMax, dims[1])) # Positions of discretised vertices in polymerisation space 
 dν   = νs[2]-νs[1]
 nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 
-derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
+# K₂ = 1.0
+# K₃ = 2.0
+# K₄ = 1.0  
+# α_C = 100.0
+# δ_C = 0.01
+# σ = 10.0
+# N = 100
+# β = N*(σ*K₃ - K₂*K₄)
+# 𝓓 = α_C*δ_C*N^2*(K₂+σ*K₃)
+# Tᵣ = 0.002
+# h₀ = 0.01
+# Ωperp = 1.0
+# 𝓒 = 10.0
 
-#%%
+mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
 
-sol = glycosylationAnyD(xs, mat_h, nSpatialDims, Ngrid, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar, ϕ)
-                 
+sol = glycosylationAnyD(mat_h, dims, Ωperp, 𝓒, K₂, K₄, Tᵣ, α_C , 𝓓, β)
+
 println("finished sim")
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims Ωperp k_Cd k_Ca k_Sd k_Sa k₁ k₂ k₃ k₄ E_0 𝓒 𝓢 D_C D_S Tᵣstar ϕ
+paramsName = @savename nSpatialDims K₂ K₃ K₄ α_C δ_C σ N β 𝓓 Tᵣ h₀ Ωperp 𝓒
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 subFolder = ""
@@ -110,8 +142,12 @@ mkpath(datadir("sims",subFolder,folderName))
 W = vertexVolumeWeightsMatrix(dims, spacing)
 
 if nSpatialDims==1
-    concentrationSurfaceMovie(sol.u, sol.t, dims; subFolder="", folderName=folderName)
+    concentrationSurfaceMovie(sol.u, sol.t, dims; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
 else
     spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
+    uSlices = [reshape(u, dims...)[:,:,dims[3]÷2] for u in sol.u]
+    uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
+    concentrationSurfaceMovie(uSlicesReshaped, sol.t, dims[1:2]; subFolder=subFolder, folderName=folderName)
 end
 

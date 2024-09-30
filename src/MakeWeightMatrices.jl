@@ -144,8 +144,8 @@ function edgeLengthMatrix(dims, spacing)
         l_i = fill(spacing[i], nEdgesi)
         append!(lvec, l_i)
     end
-    l = spdiagm(lvec)
-    return l
+    L = spdiagm(lvec)
+    return L
 end
 
 # Diagonal inverse matrix of edge lengths
