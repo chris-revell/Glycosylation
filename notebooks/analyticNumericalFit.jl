@@ -40,96 +40,97 @@ using Printf
 using SciMLOperators
 using Dates
 using InvertedIndices
-using XLSX
-using DataFrames
-using Interpolations
-using Statistics
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
-@from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
-h₀ = 0.0001
+
+h₀ = 1.0
 
 nSpatialDims = 1
 
-Ωperp = 1.0  # Lumen footprint area
-N     = 100         # Maximum polymer length 
-k_Cd  = 3000.0 # Complex desorption rate
-k_Ca  = 0.01 # Complex adsorption rate
-k_Sd  = 1.0 # Substrate desorption rate
-k_Sa  = 1.0 # Substrate adsorption rate
-k₁    = 2.0   # Complex formation forward reaction rate 
-k₂    = 0.01   # Complex dissociation reverse reaction rate 
-k₃    = 0.01   # Product formation
-k₄    = 2.0  # Product dissociation 
-E_0   = 0.01
-𝓒     = 1.0
-𝓢     = 1000.0
-D_C   = 0.000001  # Monomer/polymer diffusivity
-D_S   = 0.000001  # Substrate diffusivity
-Tᵣstar= 0.01  # Release time
-ϕ     = 0.5
+K₂ = 1.0
+K₄ = 0.00001
+Tᵣ = 3.0
+α_C = 1.0
+𝓓 = 1.0
+β = 1.0
 
-Ngrid = 101
-nSpatialDims == 1 ? dims  = [Ngrid, Ngrid] : dims  = [Ngrid, Ngrid, Ngrid]
-derivedParams = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
-@unpack 𝓔, K₃, K₄, δ_C, δ_S, Tᵣ, Ω, α_C, α_S, C_b, S_b, C_0, S_0, K₂, σ, ϵ, 𝓓, β, K₂, L₀ = derivedParams
+Ngrid = 51
+dims  = [Ngrid, Ngrid]
 #%%
 
 xMax = sqrt(π)
 xs   = collect(range(0.0, xMax, dims[2]))
 dx   = xs[2]-xs[1]
-if nSpatialDims > 1 
-    yMax = xMax
-    ys   = collect(range(0.0, yMax, dims[3]))
-    dy   = ys[2]-ys[1]
-end
 νMax = 1.0
 νs   = collect(range(0.0, νMax, dims[1])) # Positions of discretised vertices in polymerisation space 
 dν   = νs[2]-νs[1]
-nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
+spacing  = [dν, dx]
 
-# K₂ = 1.0
-# K₃ = 2.0
-# K₄ = 1.0  
-# α_C = 100.0
-# δ_C = 0.01
-# σ = 10.0
-# N = 100
-# β = N*(σ*K₃ - K₂*K₄)
-# 𝓓 = α_C*δ_C*N^2*(K₂+σ*K₃)
-# Tᵣ = 0.002
-# h₀ = 0.01
-# Ωperp = 1.0
-# 𝓒 = 10.0
-
-# mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
+mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
 
 sol = glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C , 𝓓, β)
-
 println("finished sim")
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₃ K₄ α_C δ_C σ N β 𝓓 Tᵣ h₀ Ωperp 𝓒
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ h₀
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 subFolder = ""
 mkpath(datadir("sims",subFolder,folderName))
 
-W = vertexVolumeWeightsMatrix(dims, spacing)
+midpoint = length(sol.u)÷3
 
-if nSpatialDims==1
-    concentrationSurfaceMovie(sol.u, sol.t, dims; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
-else
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
-    uSlices = [reshape(u, dims...)[:,:,dims[3]÷2] for u in sol.u]
-    uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
-    concentrationSurfaceMovie(uSlicesReshaped, sol.t, dims[1:2]; subFolder=subFolder, folderName=folderName)
+C_peak, ind_peak = findmax(reshape(sol.u[midpoint], dims...)[:,15])
+ν_peak = νs[ind_peak]
+
+Ẽ = K₂/(1+K₂)
+D = Ẽ*K₂*K₄/(1+α_C)
+
+t₀ = sol.t[midpoint] - 1/(4.0*π*D*C_peak^2)
+
+ν₀ = ν_peak - Ẽ*β*(sol.t[midpoint]-t₀)/(1+α_C)
+
+
+#%%
+
+fig = Figure(size=(1000,1000))
+ax = CairoMakie.Axis(fig[1, 1], aspect=1)
+ax.xlabel = "ν"
+ax.ylabel = "C"
+analyticLine = Observable(zeros(dims[1]))
+numericLine = Observable(zeros(dims[1]))
+l1 = lines!(ax, νs, analyticLine, color=:red)
+l2 = lines!(ax, νs, numericLine, color=:blue)
+Legend(fig[1,2], [l1, l2], ["Analytic", "Numeric"])
+ylims!(ax, (0.0, 15.0))
+νsOffset = νs.-ν₀
+tsOffset = sol.t.-t₀
+analyticVals = homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[1])
+record(fig, datadir("sims",subFolder, folderName, "analyticCs.mp4"), 1:length(sol.t); framerate=50) do i
+    analyticVals .= homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[i])
+    analyticLine[] .= tst
+    uInternal = reshape(sol.u[i], dims...)
+    numericLine[] .= uInternal[:,dims[2]÷2]
+    analyticLine[] = analyticLine[]
+    numericLine[] = numericLine[]
+    if i in [1, 251, 500]
+        save(datadir("sims",subFolder, folderName, "analyticCs$i.png"), fig)
+    end
 end
+
+
+# tst = homogeneousWidthC.(νs, K₂, K₄, α_C, β, sol.t[5])
+# analyticLine[] .= tst
+# uInternal = reshape(sol.u[end], dims...)
+# numericLine[] .= uInternal[:,dims[2]÷2]
+# analyticLine[] = analyticLine[]
+# numericLine[] = numericLine[]
+
+# display(fig)

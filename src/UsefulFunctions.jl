@@ -4,6 +4,7 @@ module UsefulFunctions
 using LinearAlgebra
 using SparseArrays
 using UnPack
+using Statistics
 
 # Integrate over ν to find E field in spatial dimensions.
 # When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
@@ -22,20 +23,20 @@ end
 
 # Function to update linear operator with new values for E at each iteration in solving the ODE system
 function updateOperator!(L, u, p, t)
-    @unpack Part1, Part2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
-    E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
-    L .= Esparse*Part1 .+ Part2
+    # @unpack Part1, Part2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
+    E!(u, p.dims, p.Esparse, p.matE, p.matFₑ, p.K₂, p.dν)
+    L .= p.Esparse*p.Part1 .+ p.Part2
 end
 
 # Integral of h*C over space 
 function M_tilde(u, W, dims, dν, hᵥ)
     uInternal = reshape(W*hᵥ*u, dims...)
-    M_tilde = sum(uInternal, dims=(2:length(dims)))
-    return M_tilde./dν
+    return sum(uInternal, dims=(2:length(dims)))./dν
 end
 
 # Dimensional bulk functional mass integrated over space and polymerisation 
-function M_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)
+function M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)
+    Ω = π*mean(hᵥ) # Non-dimensionalised Ωperp is always π
     uInternal = reshape(W*hᵥ*u, dims...)
     M̃ = M_tilde(u, W, dims, dν, hᵥ)
     Mϕ = dν*sum(M̃[round(Int, ϕ*dims[1]) : dims[1]])
@@ -43,40 +44,34 @@ function M_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)
     return prefactor*Mϕ
 end
 
-P_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν)/Tᵣstar
+P_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b, Tᵣ) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣ #Dimensional or non-dimensionalised time?
+# P_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣstar #Dimensional or non-dimensionalised time?
 
-function 𝓟starUniform(ϕ, 𝓒, 𝓢, E_0, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
-    𝓔    = 2*Ωperp*E_0
-    Ω    = h₀*Ωperp
-    C_b  = 𝓒/Ω
-    S_b  = 𝓢/Ω
-    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
-    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
-    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω))
-    K₃   = k₃/k₁
-    K₄   = k₄/k₁
-    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+function 𝓟starUniform(N, h₀, 𝓒, ϕ, E_0, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ)
+# function 𝓟starUniform(ϕ, 𝓒, 𝓢, E_0, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
+#     𝓔    = 2*Ωperp*E_0
+#     Ω    = h₀*Ωperp
+#     C_b  = 𝓒/Ω
+#     S_b  = 𝓢/Ω
+#     Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
+#     α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
+#     K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω))
+#     K₃   = k₃/k₁
+#     K₄   = k₄/k₁
+#     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+      k₁ = 1.0
+      𝓔    = 2*π*E_0
+      Ω    = h₀*π
+      Ωperp = π
     return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
 end
 
-function homogeneousWidthC(ν̃, t̃, h₀, 𝓒, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, Ωperp, E_0, Tᵣstar)
-    𝓔    = 2*Ωperp*E_0
-    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
-    Ω    = h₀*Ωperp
-    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
-    C_b  = 𝓒/Ω 
-    S_b  = 𝓢/Ω 
-    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω))
-    K₃   = k₃/k₁
-    K₄   = k₄/k₁
-    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-    ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
-    β    = N*(σ*K₃ - K₂*K₄)
-    Etilde = K₂/(π*(1+K₂))
-    p1 = (1+α_C)/(4*π*Etilde*K₂*K₄*t̃)
-    p2 = ν̃*(1+α_C)-Etilde*β*t̃
-    p3 = 4*Etilde*K₂*K₄*(1+α_C)*t̃
-    return sqrt(p1)*exp(-p2^2/p3)
+function homogeneousWidthC(ν̃, K₂, K₄, α_C, β, t)
+    Ẽ = K₂/(1+K₂)
+    M = 1.0
+    ξ = ν̃ - Ẽ*β*t/(1+α_C)
+    D = Ẽ*K₂*K₄/(1+α_C)
+    return (M/sqrt(4.0*π*D*t))*exp(-ξ^2/(4.0*D*t))
 end
 
 export M_tilde
@@ -85,5 +80,6 @@ export P_star
 export E!
 export updateOperator!
 export 𝓟starUniform
+export homogeneousWidthC
 
 end

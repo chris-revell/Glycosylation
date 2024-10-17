@@ -52,15 +52,16 @@ using InvertedIndices
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
+u0fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
 
-function glycosylationAnyD(mat_h, dims, Ωperp, 𝓒, K₂, K₄, Tᵣ, α_C , 𝓓, β)
+function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
     
-    xMax = (Ωperp)^(1/nSpatialDims)
+    xMax = sqrt(π) #xMax = π^(1/nSpatialDims)
     xs   = collect(range(0.0, xMax, dims[2]))
-    dx   = xs[2]-xs[1]
+    dx   = xs[2]-xs[1]    
     if nSpatialDims > 1 
         yMax = xMax
         ys   = collect(range(0.0, yMax, dims[3]))
@@ -111,31 +112,31 @@ function glycosylationAnyD(mat_h, dims, Ωperp, 𝓒, K₂, K₄, Tᵣ, α_C , �
     hₑ = spdiagm(hₑ_vec)                    # Cisternal thickness over edges, as a sparse diagonal matrix
     aᵥ = spdiagm(1.0./(1.0 .+ α_C.*hᵥ_vec)) # Prefactor 1/(1+α_C*hᵥ(x)) evaluated over vertices, packaged into a sparse diagonal matrix for convenience
 
-    u0fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
     uMat = zeros(Float64, dims...)
     for ind in CartesianIndices(uMat)
-        uMat[ind] = u0fun([νs[ind[1]]], [0.0], [νMax/10.0])
+        uMat[ind] = u0fun([νs[ind[1]]], [0.0], [νMax/100.0])
     end
+    # Ensure that the integral of concentration over ν at each point in space is 1
+    integ = spacing[1].*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))    
+    
     u0 = reshape(uMat, nVerts)
-    integ = sum(W*u0)
-    u0 .*= 𝓒/integ
+    u0 .*= 1.0/integ[1]
     
     # Set value of Fₑ at each point in space
-    matFₑTmp = ones(Float64, dims...)
-    for i=2:length(dims)
+    # Integral of Fₑ over space is π
+    matFₑTmp = ones(Float64, dims[Not(1)]...)
+    for i=1:length(size(matFₑTmp))
         selectdim(matFₑTmp, i, 1) .*= 0.5
-        selectdim(matFₑTmp, i, dims[i]) .*= 0.5
+        selectdim(matFₑTmp, i, size(matFₑTmp)[i]) .*= 0.5
     end
-    integF = prod(spacing[Not(1)])*sum(selectdim(matFₑTmp, 1, 1))
+    integF = prod(spacing[Not(1)])*sum(selectdim(matFₑTmp, 1, 1:size(matFₑTmp)[1]))
+    
     # Ensure integral of Fₑ over space is π
-    matFₑ = (π/integF).*ones(Float64, dims[Not(1)]...)
+    # matFₑ = (1/integF).*ones(Float64, dims[Not(1)]...)
+    matFₑ = ones(Float64, dims[Not(1)]...)
     matE = zeros(dims...)
     Esparse = spzeros(nVerts, nVerts)
-    E!(u0, dims, Esparse, matE, matFₑ, K₂, dν)
-
-    # PDE operator components
-    # Part1 = aᵥ*∇cdot*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
-    # Part2 = 𝓓.*aᵥ*∇cdot*(hₑ*Pxy*∇ₑ)
+    E!(u0, dims, Esparse, matE, matFₑ, K₂, spacing[1])
 
     Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
     Part2 = aᵥ*∇cdot*(hₑ*Pxy*𝓓ₑ*∇ₑ)
@@ -153,7 +154,7 @@ function glycosylationAnyD(mat_h, dims, Ωperp, 𝓒, K₂, K₄, Tᵣ, α_C , �
     fullOperator = MatrixOperator(Esparse*Part1.+Part2, update_func! = updateOperator!)
     prob = ODEProblem(fullOperator, u0, (0.0, Tᵣ), p)
     println("solving")
-    sol = solve(prob, Vern9(), saveat=Tᵣ/50.0, progress=true)
+    sol = solve(prob, Vern9(), saveat=Tᵣ/500.0, progress=true)
 
     return sol
 end
