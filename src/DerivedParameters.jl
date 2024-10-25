@@ -1,46 +1,38 @@
 
 module DerivedParameters
 
-# h₀    = 0.1
-# Ωperp = 100.0  # Lumen footprint area
-# N     = 100         # Maximum polymer length 
-# k_Cd  = 200.0 # Complex desorption rate
-# k_Ca  = 1.0 # Complex adsorption rate
-# k_Sd  = 200.0 # Substrate desorption rate
-# k_Sa  = 1.1 # Substrate adsorption rate
-# k₁    = 1.0   # Complex formation forward reaction rate 
-# k₂    = 0.1   # Complex dissociation reverse reaction rate 
-# k₃    = 1.0   # Product formation
-# k₄    = 1.0  # Product dissociation 
-# E_0   = 0.001
-# 𝓒     = 100.0
-# 𝓢     = 1000.0
-# D_C   = 0.01  # Monomer/polymer diffusivity
-# D_S   = 0.01  # Substrate diffusivity
-# Tᵣstar= 10.0  # Release time
-# ϕ     = 0.5
+function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=true)
 
-function derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
+    L₀   = sqrt(Ωperp/π)       # Dimensional mean cyclindrical radius of cisterna 
+    # 𝓔    = 2*Ωperp*E₀        # Dimensional total enzyme mass
+    E₀  = 𝓔/2*Ωperp           # Dimensional mean enzyme concentration
+    # Ω    = h₀*Ωperp           # Dimensional lumen volume
+    h₀   = Ω/Ωperp             # Dimensional mean lumen thickness
+    C_b  = 𝓒/Ω                 # Dimensional initial bulk monomeric cargo concentration
+    S_b  = 𝓢/Ω                 # Dimensional initial bulk substrate concentration
+    
+    δ_C  = π*D_C/(k₁*𝓔)  # Dimensionless diffusivity
+    δ_S  = π*D_S/(k₁*𝓔)  # Dimensionless diffusivity
 
-    𝓔    = 2*Ωperp*E_0   # Total enzyme mass
-    δ_C  = π*D_C/(k₁*𝓔)
-    δ_S  = π*D_S/(k₁*𝓔)
-    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
-    Ω    = h₀*Ωperp         # Lumen volume
-    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Balance of complex in bulk to complex on membrane    
-    α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Balance of substrate in bulk to substrate on membrane 
-    C_b  = 𝓒/Ω 
-    S_b  = 𝓢/Ω 
-    C_0  = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
-    S_0  = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
-    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
-    K₃   = k₃/k₁    # Non-dimensionalised product formation rate
-    K₄   = k₄/k₁    # Non-dimensionalised prodict dissociation rate
-    σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-    ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
-    𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)
-    β    = N*(σ*K₃ - K₂*K₄)
-    L₀  = sqrt(π)*Ω / (Ωperp)^(1.5) # Mean radius 
+    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Dimensionless complex capacitance
+    α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Dimensionless substrate capacitance    
+
+    C₀   = 𝓒/(2*Ωperp*(1+α_C))  # Dimensional Early surface monomer concentration
+    S₀   = 𝓢/(2*Ωperp*(1+α_S))  # Dimensional Early surface substrate concentration 
+    
+    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)   # Dimensionless release time 
+    
+    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
+    K₃   = k₃/k₁                                            # Dimensionless product formation rate
+    K₄   = k₄/k₁                                            # Dimensionless prodict dissociation rate
+    # σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+    σ    = S₀/C₀                                            # Dimensionless substrate/cargo concentration on surface
+    # σ    = 𝓢*(1+α_C)/(𝓒*(1+α_S))
+    # ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
+    ϵ    = E₀/C₀                                            # Dimensionless enzyme/cargo concentration on surface 
+    # ϵ    = 𝓔*(1+α_C)/𝓒
+    𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)    # Dimensionless parameter on diffusion term, derived from combination of other terms
+    β    = N*(σ*K₃ - K₂*K₄)           # Dimensionless parameter on advection term, derived from combination of other terms 
 
     if checks 
         println("Small aspect ratio: Ω² << Ω⟂³min(1, D_C/k₁𝓔, D_S/k₁𝓔)")
@@ -111,31 +103,8 @@ function derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, 
 
     end
 
-    return Dict("𝓔"=>𝓔, "K₃"=>K₃, "K₄"=>K₄, "δ_C"=>δ_C, "δ_S"=>δ_S, "Tᵣ"=>Tᵣ, "Ω"=>Ω, "α_C"=>α_C, "α_S"=>α_S, "C_b"=>C_b, "S_b"=>S_b, "C_0"=>C_0, "S_0"=>S_0, "K₂"=>K₂, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β, "K₂"=>K₂, "L₀"=>L₀)
+    return Dict("L₀"=>L₀, "E₀"=>E₀, "h₀"=>h₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β)
 end 
-
-# function derivedParameterNoChecks(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar)
-#     𝓔    = 2*Ωperp*E_0   # Total enzyme mass
-#     δ_C  = π*D_C/(k₁*𝓔)
-#     δ_S  = π*D_S/(k₁*𝓔)
-#     Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
-#     Ω    = h₀*Ωperp         # Lumen volume
-#     α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Balance of complex in bulk to complex on membrane    
-#     α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Balance of substrate in bulk to substrate on membrane 
-#     C_b  = 𝓒/Ω 
-#     S_b  = 𝓢/Ω 
-#     C_0  = C_b*h₀/(2*(1+α_C))      # Early surface monomer concentration
-#     S_0  = S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
-#     K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Non-dimensionalised complex formation net reaction rate
-#     K₃   = k₃/k₁    # Non-dimensionalised product formation rate
-#     K₄   = k₄/k₁    # Non-dimensionalised prodict dissociation rate
-#     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-#     ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
-#     𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)
-#     β    = N*(σ*K₃ - K₂*K₄)
-#     L₀  = sqrt(π)*Ω / (Ωperp)^(1.5) # Mean radius 
-#     return Dict("𝓔"=>𝓔, "K₃"=>K₃, "K₄"=>K₄, "δ_C"=>δ_C, "δ_S"=>δ_S, "Tᵣ"=>Tᵣ, "Ω"=>Ω, "α_C"=>α_C, "α_S"=>α_S, "C_b"=>C_b, "S_b"=>S_b, "C_0"=>C_0, "S_0"=>S_0, "K₂"=>K₂, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β, "K₂"=>K₂, "L₀"=>L₀)
-# end 
 
 export derivedParameters
 

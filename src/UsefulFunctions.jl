@@ -47,9 +47,9 @@ end
 P_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b, Tᵣ) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣ #Dimensional or non-dimensionalised time?
 # P_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣstar #Dimensional or non-dimensionalised time?
 
-function 𝓟starUniform(N, h₀, 𝓒, ϕ, E_0, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ)
-# function 𝓟starUniform(ϕ, 𝓒, 𝓢, E_0, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
-#     𝓔    = 2*Ωperp*E_0
+function 𝓟starUniform(N, h₀, 𝓒, ϕ, E₀, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ)
+# function 𝓟starUniform(ϕ, 𝓒, 𝓢, E₀, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
+#     𝓔    = 2*Ωperp*E₀
 #     Ω    = h₀*Ωperp
 #     C_b  = 𝓒/Ω
 #     S_b  = 𝓢/Ω
@@ -60,7 +60,7 @@ function 𝓟starUniform(N, h₀, 𝓒, ϕ, E_0, C_b, S_b, Tᵣ, α_C, K₂, K�
 #     K₄   = k₄/k₁
 #     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
       k₁ = 1.0
-      𝓔    = 2*π*E_0
+      𝓔    = 2*π*E₀
       Ω    = h₀*π
       Ωperp = π
     return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)

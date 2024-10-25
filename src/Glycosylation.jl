@@ -46,20 +46,43 @@ using SciMLOperators
 using DataFrames
 using Statistics
 using InvertedIndices
+using GaussianRandomFields
 
 @from "$(srcdir("MakeIncidenceMatrix.jl"))" using MakeIncidenceMatrix
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
-u0fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
+u0Fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
 
-function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
+function hFun(dims; λ=0.1, σ=1.0)
+    if length(dims) == 2
+        cov = CovarianceFunction(length(dims)-1, Gaussian(λ, σ=σ))
+        pts = range(0, stop=1, length=dims[2])
+        grf = GaussianRandomField(cov, CirculantEmbedding(), pts, minpadding=10001)
+        mat_hSlice = sample(grf)[1:dims[2]]
+    else
+        cov = CovarianceFunction(length(dims)-1, Gaussian(λ, σ=σ))
+        pts1 = range(0, stop=1, length=dims[2])
+        pts2 = range(0, stop=1, length=dims[3])
+        grf = GaussianRandomField(cov, CirculantEmbedding(), pts1, pts2, minpadding=10001)
+        mat_hSlice = sample(grf)[1:dims[2], 1:dims[3]]
+    end
+    mat_hSlice .= mat_hSlice.-mean(mat_hSlice).+1.0
+    mat_h = zeros(dims...)
+    for i=1:dims[1]
+        selectdim(mat_h, 1, i) .= mat_hSlice
+    end
+    return mat_h
+end
+
+
+function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform")
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
     
-    xMax = sqrt(π) #xMax = π^(1/nSpatialDims)
+    xMax = π^(1/nSpatialDims)
     xs   = collect(range(0.0, xMax, dims[2]))
     dx   = xs[2]-xs[1]    
     if nSpatialDims > 1 
@@ -71,8 +94,6 @@ function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
     νs   = collect(range(0.0, νMax, dims[1])) # Positions of discretised vertices in polymerisation space 
     dν   = νs[2]-νs[1]
     nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
-
-    h₀ = mean(selectdim(mat_h, 1, 1))
 
     A   = makeIncidenceMatrix3D(dims)
     Ā   = abs.(A)
@@ -106,6 +127,7 @@ function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
 
     # Diagonal matrices of compartment thickness h over all vertices hᵥ
     # Also diagonal matrix of thickness over edges, formed by taking mean of h at adjacent vertices 0.5.*Ā*hᵥ
+    thickness=="GRF" ? mat_h = hFun(dims) : mat_h = ones(dims...)
     hᵥ_vec = reshape(mat_h, nVerts)         # Cisternal thickness evaluated over vertices 
     hₑ_vec = 0.5.*Ā*hᵥ_vec                  # Cisternal thickness evaluated over edges (mean of adjacent vertices)
     hᵥ = spdiagm(hᵥ_vec)                    # Cisternal thickness over vertices, as a sparse diagonal matrix
@@ -114,7 +136,7 @@ function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
 
     uMat = zeros(Float64, dims...)
     for ind in CartesianIndices(uMat)
-        uMat[ind] = u0fun([νs[ind[1]]], [0.0], [νMax/100.0])
+        uMat[ind] = u0Fun([νs[ind[1]]], [0.0], [νMax/100.0])
     end
     # Ensure that the integral of concentration over ν at each point in space is 1
     integ = spacing[1].*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))    
@@ -139,6 +161,7 @@ function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
     E!(u0, dims, Esparse, matE, matFₑ, K₂, spacing[1])
 
     Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
+    # Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Ā./2.0)
     Part2 = aᵥ*∇cdot*(hₑ*Pxy*𝓓ₑ*∇ₑ)
 
     p = (Part1 = Part1, 
@@ -151,7 +174,7 @@ function glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
         K₂ = K₂, 
         dν = dν,
     )
-    fullOperator = MatrixOperator(Esparse*Part1.+Part2, update_func! = updateOperator!)
+    fullOperator = MatrixOperator(Esparse*Part1, update_func! = updateOperator!)
     prob = ODEProblem(fullOperator, u0, (0.0, Tᵣ), p)
     println("solving")
     sol = solve(prob, Vern9(), saveat=Tᵣ/500.0, progress=true)
