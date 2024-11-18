@@ -55,17 +55,21 @@ using GaussianRandomFields
 
 u0Fun(xs, μs, σs) = exp(-sum((xs.-μs).^2.0./σs.^2.0)) # Multidimensional Gaussian
 
-function hFun(dims; λ=0.1, σ=1.0)
+function hFun(dims; λ=0.1, σ=0.1)
     if length(dims) == 2
+        # cov = CovarianceFunction(length(dims)-1, Exponential(λ, σ=σ))# Gaussian(λ, σ=σ))
         cov = CovarianceFunction(length(dims)-1, Gaussian(λ, σ=σ))
         pts = range(0, stop=1, length=dims[2])
-        grf = GaussianRandomField(cov, CirculantEmbedding(), pts, minpadding=10001)
+        grf = GaussianRandomField(cov, CirculantEmbedding(), pts, minpadding=113)
+        # grf = GaussianRandomField(cov, Cholesky(), pts, minpadding=10001)
         mat_hSlice = sample(grf)[1:dims[2]]
     else
+        # cov = CovarianceFunction(length(dims)-1, Exponential(λ, σ=σ))# Gaussian(λ, σ=σ))
         cov = CovarianceFunction(length(dims)-1, Gaussian(λ, σ=σ))
         pts1 = range(0, stop=1, length=dims[2])
         pts2 = range(0, stop=1, length=dims[3])
-        grf = GaussianRandomField(cov, CirculantEmbedding(), pts1, pts2, minpadding=10001)
+        grf = GaussianRandomField(cov, CirculantEmbedding(), pts1, pts2, minpadding=113)
+        # grf = GaussianRandomField(cov, Cholesky(), pts1, pts2, minpadding=10001)
         mat_hSlice = sample(grf)[1:dims[2], 1:dims[3]]
     end
     mat_hSlice .= mat_hSlice.-mean(mat_hSlice).+1.0
@@ -76,8 +80,7 @@ function hFun(dims; λ=0.1, σ=1.0)
     return mat_h
 end
 
-
-function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform")
+function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λ=0.1, σ=0.1)
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
@@ -127,7 +130,7 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
 
     # Diagonal matrices of compartment thickness h over all vertices hᵥ
     # Also diagonal matrix of thickness over edges, formed by taking mean of h at adjacent vertices 0.5.*Ā*hᵥ
-    thickness=="GRF" ? mat_h = hFun(dims) : mat_h = ones(dims...)
+    thickness=="GRF" ? mat_h = hFun(dims, λ=λ, σ=σ) : mat_h = ones(dims...)
     hᵥ_vec = reshape(mat_h, nVerts)         # Cisternal thickness evaluated over vertices 
     hₑ_vec = 0.5.*Ā*hᵥ_vec                  # Cisternal thickness evaluated over edges (mean of adjacent vertices)
     hᵥ = spdiagm(hᵥ_vec)                    # Cisternal thickness over vertices, as a sparse diagonal matrix
@@ -136,7 +139,7 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
 
     uMat = zeros(Float64, dims...)
     for ind in CartesianIndices(uMat)
-        uMat[ind] = u0Fun([νs[ind[1]]], [0.0], [νMax/100.0])
+        uMat[ind] = u0Fun([νs[ind[1]]], [0.0], [νMax/50.0])
     end
     # Ensure that the integral of concentration over ν at each point in space is 1
     integ = spacing[1].*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))    
@@ -160,9 +163,12 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
     Esparse = spzeros(nVerts, nVerts)
     E!(u0, dims, Esparse, matE, matFₑ, K₂, spacing[1])
 
-    Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
-    # Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Ā./2.0)
-    Part2 = aᵥ*∇cdot*(hₑ*Pxy*𝓓ₑ*∇ₑ)
+    if differencing=="upstream"
+        Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Aᵤₚ)
+    else
+        Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Ā./2.0)
+    end
+    Part2 = aᵥ*∇cdot*Aperpₑ*(hₑ*Pxy*𝓓ₑ*∇ₑ)
 
     p = (Part1 = Part1, 
         Part2 = Part2, 
@@ -177,11 +183,11 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
     fullOperator = MatrixOperator(Esparse*Part1, update_func! = updateOperator!)
     prob = ODEProblem(fullOperator, u0, (0.0, Tᵣ), p)
     println("solving")
-    sol = solve(prob, Vern9(), saveat=Tᵣ/500.0, progress=true)
+    sol = solve(prob, solver, saveat=Tᵣ/(nOutputs-1), progress=true)#, dt=0.0001)
 
-    return sol
+    return sol, mat_h
 end
 
-export glycosylationAnyD
+export glycosylationAnyD, hFun
 
 end

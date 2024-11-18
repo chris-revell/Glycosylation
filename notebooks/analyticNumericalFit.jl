@@ -47,6 +47,7 @@ using InvertedIndices
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
+differencing = "centre"
 nSpatialDims = 1
 Tᵣ = 30.0
 K₂ = 1.0
@@ -54,25 +55,26 @@ K₄ = 0.0001
 α_C = 1.0
 𝓓 = 1.0
 β = 0.1
-Ngrid = 201
-# dims  = fill(Ngrid, nSpatialDims+1)
-dims = [Ngrid,1]
+Ngrid = 401
+dims = [Ngrid,2]
 
 #%%
 
-sol = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β) 
+sol = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432())#NDBLSRK124()) 
 println("finished sim")
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ h₀
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
-subFolder = ""
+subFolder = "analyticNumericFit"
 mkpath(datadir("sims",subFolder,folderName))
 
 #%%
+
+νs   = collect(range(0.0, 1.0, dims[1])) 
 
 midpoint = length(sol.u)÷2
 C_peak, ind_peak = findmax(reshape(sol.u[midpoint], dims...)[:,1])
@@ -82,7 +84,6 @@ D = Ẽ*K₂*K₄/(1+α_C)
 t₀ = sol.t[midpoint] - 1/(4.0*π*D*C_peak^2)
 ν₀ = ν_peak - Ẽ*β*(sol.t[midpoint]-t₀)/(1+α_C)
 
-νs   = collect(range(0.0, 1.0, dims[1])) 
 νsOffset = νs.-ν₀
 tsOffset = sol.t.-t₀
 
@@ -91,18 +92,19 @@ tsOffset = sol.t.-t₀
 fig = Figure(size=(1000,750), fontsize=32)
 ax = CairoMakie.Axis(fig[1, 1])
 ylims!(ax, (0.0, 20.0))
+xlims!(ax, (0.0, 1.0))
 allLines = []
 for (c,i) in enumerate([1, 251, 500])
     uInternal = reshape(sol.u[i], dims...)
-    push!(allLines, lines!(ax, νs, uInternal[:,1], linestyle=:solid, color=(:blue, 1.0), linewidth=4))
-    push!(allLines, lines!(ax, νs, homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[i]), linestyle=:dash, color=(:red,1.0), linewidth=4))
+    push!(allLines, lines!(ax, νs, uInternal[:,1], linestyle=:solid, color=(:blue, 0.5), linewidth=4))
+    push!(allLines, lines!(ax, νs, homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[i]), linestyle=:dot, color=(:black, 0.5), linewidth=4))
 end
 Legend(fig[1,2], allLines[1:2], ["Numeric", "Analytic"])
 ax.xlabel = L"\nu"
 ax.ylabel = L"C"
-save(datadir("sims", subFolder, folderName, "analyticComparison.png"), fig)
+save(datadir("sims", subFolder, folderName, "analyticComparisonν_0=$(@sprintf("%f", ν₀))t_0=$(@sprintf("%f", t₀)).png"), fig)
 
-#%%
+# #%%
 
 fig = Figure(size=(1000,1000))
 ax = CairoMakie.Axis(fig[1, 1], aspect=1)
@@ -114,6 +116,7 @@ l1 = lines!(ax, νs, analyticLine, color=:red)
 l2 = lines!(ax, νs, numericLine, color=:blue)
 Legend(fig[1,2], [l1, l2], ["Analytic", "Numeric"])
 ylims!(ax, (0.0, 20.0))
+xlims!(ax, (0.0, 1.0))
 analyticVals = homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[1])
 record(fig, datadir("sims",subFolder, folderName, "analyticCs.mp4"), 1:length(sol.t); framerate=50) do i
     analyticVals .= homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[i])
@@ -122,7 +125,4 @@ record(fig, datadir("sims",subFolder, folderName, "analyticCs.mp4"), 1:length(so
     numericLine[] .= uInternal[:,dims[2]÷2]
     analyticLine[] = analyticLine[]
     numericLine[] = numericLine[]
-    # if i in [1, 251, 500]
-    #     save(datadir("sims",subFolder, folderName, "analyticCs$i.png"), fig)
-    # end
 end

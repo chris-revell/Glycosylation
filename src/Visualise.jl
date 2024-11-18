@@ -9,6 +9,25 @@ using FromFile
 
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 
+function thicknessPlot(mat_h; subFolder="", folderName="") 
+    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    fig = Figure(size=(1000,1000))
+    ax = Axis(fig[1, 1])
+
+    if ndims(mat_h) == 2
+        ax.xlabel = "x"
+        ax.ylabel = "h"
+        lines!(ax, mat_h[1,:])
+        save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
+    else
+        ax.xlabel = "x"
+        ax.ylabel = "y"
+        heatmap!(ax, mat_h[1,:,:])
+        save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
+    end
+    return nothing 
+end
+
 function concentrationSurfaceMovie(solu, ts, dims; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
     fig = Figure(size=(1000,1000))
@@ -21,8 +40,28 @@ function concentrationSurfaceMovie(solu, ts, dims; subFolder="", folderName="")
     globalmax = maximum([maximum(u) for u in solu])
     zlims!(ax, (globalmin, globalmax))
     clims = (globalmin,globalmax)
+    hidedecorations!(ax)
     surface!(ax, uInternal, colorrange=clims, colormap=:batlow)
     record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(ts); framerate=10) do i
+        uInternal[] .= reshape(solu[i], dims...)
+        uInternal[] = uInternal[]
+    end
+    return nothing 
+end
+
+function concentrationHeatmapMovie(solu, ts, dims; subFolder="", folderName="") 
+    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    fig = Figure(size=(1000,1000))
+    # ax = Axis(fig[1, 1], aspect=:equal)
+    ax = Axis(fig[1, 1])
+    ax.xlabel = "ν"
+    ax.ylabel = "x"
+    uInternal = Observable(zeros(dims...))
+    globalmin = minimum([minimum(u) for u in solu])
+    globalmax = maximum([maximum(u) for u in solu])
+    clims = (globalmin,globalmax)
+    heatmap!(ax, uInternal, colorrange=clims, colormap=:batlow)
+    record(fig, datadir("sims",subFolder,folderName,"concentrationHeatmapMovie.mp4"), 1:length(ts); framerate=10) do i
         uInternal[] .= reshape(solu[i], dims...)
         uInternal[] = uInternal[]
     end
@@ -75,8 +114,7 @@ function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, vertexWeightsMatrix; s
     ax.xlabel = "x"
     ax.ylabel = "y"
     ax.title = "Useful production P over x and y"
-    M = Observable(zeros(dims[1:2]))
-    
+    M = Observable(zeros(dims[2:3]))
     heatmap!(ax, M, colorrange=(0.0, globalmax), colormap=:inferno)
     record(fig, datadir("sims",subFolder,folderName,"productionHeatmap.mp4"), 1:length(solu); framerate=10) do i
         uInternal .= reshape((vertexWeightsMatrix*solu[i]), dims)
@@ -90,7 +128,9 @@ end
 
 
 export concentrationSurfaceMovie
+export concentrationHeatmapMovie
 export spaceIntegralOver_ν_Movie
 export productionHeatmap3D
+export thicknessPlot
 
 end

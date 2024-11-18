@@ -29,7 +29,6 @@
 
 #
 
-
 using OrdinaryDiffEq
 using SparseArrays
 using UnPack
@@ -39,7 +38,7 @@ using DrWatson
 using Printf
 using SciMLOperators
 using Dates
-using CairoMakie
+using InvertedIndices
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("Visualise.jl"))" using Visualise
@@ -47,35 +46,37 @@ using CairoMakie
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
-h₀s = collect(0.000001:0.000002:0.0001)
+#%%
 
-nSpatialDims = 1
-
-Ωperp = 1.0  # Lumen footprint area
-N     = 100         # Maximum polymer length 
-k_Cd  = 3000.0 # Complex desorption rate
-k_Ca  = 0.01 # Complex adsorption rate
-k_Sd  = 1.0 # Substrate desorption rate
-k_Sa  = 1.0 # Substrate adsorption rate
-k₁    = 2.0   # Complex formation forward reaction rate 
-k₂    = 0.01   # Complex dissociation reverse reaction rate 
-k₃    = 0.01   # Product formation
-k₄    = 2.0  # Product dissociation 
-E_0   = 0.01
-𝓒     = 1.0
-𝓢     = 1000.0
-D_C   = 0.000001  # Monomer/polymer diffusivity
-D_S   = 0.000001  # Substrate diffusivity
-Tᵣstar= 1.0  # Release time
-ϕ     = 0.5
-
-Ngrid = 101
-nSpatialDims == 1 ? dims  = [Ngrid, Ngrid] : dims  = [Ngrid, Ngrid, Ngrid]
-
+include(projectdir("notebooks","paramsRaw.jl"))
 h_C = 2*k_Ca/k_Cd
 h_S = 2*k_Sa/k_Sd
+hMax = h_C*100
+hMin = h_C/10
+h₀s = collect(hMin:5*hMin:hMax)
+Ωs    = h₀s.*Ωperp      # Dimensional lumen volume 
 
-xMax = sqrt(π)
+#%%
+
+# include(projectdir("notebooks","paramsDerived.jl"))
+
+#%%
+
+# h₀s = collect(0.01:0.01:1.0)
+# Ωs    = h₀s.*Ωperp      # Dimensional lumen volume 
+
+# Tᵣstar = (2\vert\Omega_\perp\vert N^2 \tilde{T}_r)/𝓔
+#     \frac{2k_{Sa}\vert\Omega_\perp\vert+k_{Sd}\vert\Omega\vert}{2k_{Ca}\vert\Omega_\perp\vert+k_{Cd}\vert\Omega\vert}
+#     \frac{k_1 k_{Ca} C_b \vert\Omega\vert}{k_1 k_2(2k_{Sa}\vert\Omega_\perp\vert+k_{Sd}\vert\Omega\vert)+k_3 k_{Sa} S_b\vert\Omega\vert}.
+
+
+
+
+Δ = k₁*𝓒/(2.0*k₂*Ωperp)
+
+dims[2] = dims[2]÷100
+
+xMax = π^(1/nSpatialDims)
 xs   = collect(range(0.0, xMax, dims[2]))
 dx   = xs[2]-xs[1]
 if nSpatialDims > 1 
@@ -87,58 +88,95 @@ end
 νs   = collect(range(0.0, νMax, dims[1])) # Positions of discretised vertices in polymerisation space 
 dν   = νs[2]-νs[1]
 nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
-
 W = vertexVolumeWeightsMatrix(dims, spacing)
 
 PstarsAnalytic = []
 PstarsSim = []
-for h₀ in h₀s
-    @show h₀
-    mat_h = h₀.*ones(fill(Ngrid, nSpatialDims+1)...)
-    derivedParams = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=false)
-    @unpack 𝓔, K₃, K₄, δ_C, δ_S, Tᵣ, Ω, α_C, α_S, C_b, S_b, C_0, S_0, K₂, σ, ϵ, 𝓓, β, K₂, L₀ = derivedParams
-    sol = glycosylationAnyD(mat_h, dims, K₂, K₄, Tᵣ, α_C, 𝓓, β)
-    hᵥ_vec = reshape(mat_h, (Ngrid)^(nSpatialDims+1))
-    hᵥ = spdiagm(hᵥ_vec)
-    push!(PstarsSim, P_star(sol[end], W, dims, dν, hᵥ, ϕ, α_C, C_b, Tᵣ))
-    push!(PstarsAnalytic, 𝓟starUniform(N, h₀, 𝓒, ϕ, E_0, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ))
+MstarsSim = []
+sols = []
+for i=1:length(h₀s)
+    @show h₀s[i]
+    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=false)
+    @unpack L₀, E₀, h₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β, λ = derivedParams
+
+    # @show (𝓔*β*Tᵣ < 1+α_C)
+
+    sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432(), nOutputs=200)
+
+    hᵥ = spdiagm(ones(prod(dims)))
+    M_stars = Float64[]
+    for u in sol.u
+        uInternal = reshape(W*hᵥ*u, dims...)
+        M̃ = sum(uInternal, dims=(2:length(dims)))
+        Mϕ = sum(M̃[ceil(Int, ϕ*dims[1]) : dims[1]])
+        push!(M_stars, Mϕ/sum(M̃))
+    end
+    T50 = findfirst(x->x>0.5, M_stars)
+    @show T50
+    push!(sols, sol)
+    # push!(PstarsSim, P_star(sol.u[T50], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ, sol.t[T50]))
+    push!(PstarsSim, M_stars[T50]/sol.t[T50])
+    push!(MstarsSim, M_stars[T50])
+    push!(PstarsAnalytic, 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, K₃, K₄, Ωperp, h₀s[i], h_C, h_S, Δ))
 end
+
+
+# PstarsAnalytic = []
+# PstarsSim = []
+# j = 5
+# for (i,sol) in enumerate(sols)
+#     derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=false)
+#     @unpack L₀, E₀, h₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β, λ = derivedParams
+#     # push!(PstarsSim, P_star(sol.u[j], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ, sol.t[j]))
+#     # push!(MstarsSim, M_star(sol.u[end], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ))
+#     push!(PstarsAnalytic, 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, K₃, K₄, Ωperp, h₀s[i], h_C, h_S, Δ))
+# end
 
 #%%
 
-fig = Figure(size=(500,500))
-ax1 = Axis(fig[1,1])
 linesVec = []
 labelsVec = []
-push!(linesVec, lines!(ax1, h₀s, PstarsSim, color=:blue))
+fig = Figure(size=(500,500))
+ax1 = Axis(fig[1,1])
+push!(linesVec, lines!(ax1, h₀s, MstarsSim, color=:blue))
 push!(labelsVec, "Numerical")
-ylims!(ax1, (0.0,maximum(PstarsSim)))
-# xlims!(ax1, (0.0,maximum(h₀s)))
+ylims!(ax1, (0.0,maximum(MstarsSim)))
+xlims!(ax1, (0.0,maximum(h₀s)))
 ax1.xlabel = "h₀"
-ax1.ylabel = L"𝓟^*"
+ax1.ylabel = L"M^*"
 
 ax2 = Axis(fig[2,1])
+push!(linesVec, lines!(ax2, h₀s, PstarsSim, color=:blue))
+push!(labelsVec, "Numerical")
+ylims!(ax2, (0.0,maximum(PstarsSim)))
+xlims!(ax2, (0.0,maximum(h₀s)))
 ax2.xlabel = "h₀"
 ax2.ylabel = L"𝓟^*"
-ylims!(ax2, (0.0,maximum(PstarsAnalytic)))
-# xlims!(ax2, (0.0,maximum(h₀s)))
-push!(linesVec, lines!(ax2, h₀s, PstarsAnalytic, color=:red))
+
+ax3 = Axis(fig[3,1])
+ax3.xlabel = "h₀"
+ax3.ylabel = L"𝓟^*"
+ylims!(ax3, (0.0,maximum(PstarsAnalytic)))
+xlims!(ax3, (0.0,maximum(h₀s)))
+push!(linesVec, lines!(ax3, h₀s, PstarsAnalytic, color=:red))
 push!(labelsVec, "Analytic")
 
-push!(linesVec, vlines!(ax1, h_C, color=:green))
-push!(labelsVec, L"h_C")
-push!(linesVec, vlines!(ax2, h_C, color=:green))
-push!(labelsVec, L"h_C")
+# push!(linesVec, vlines!(ax1, h_C, color=:green))
+# push!(labelsVec, L"h_C")
+# push!(linesVec, vlines!(ax2, h_C, color=:green))
+# push!(labelsVec, L"h_C")
 # push!(linesVec, vlines!(ax1, h_S, color=:orange))
 # push!(labelsVec, L"h_S")
 # push!(linesVec, vlines!(ax2, h_S, color=:orange))
 # push!(labelsVec, L"h_S")
 
-Legend(fig[:,2], linesVec, labelsVec)
+# Legend(fig[:,2], linesVec, labelsVec)
 
 display(fig)
 
-# save("simulationPvsh.png",fig)
+paramsName = @savename k_Cd k_Ca k_Sd k_Sa k₁ k₂ k₃ k₄ 𝓒 𝓢 𝓔 D_C D_S Tᵣstar ϕ
+# folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
+save("$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)_simulationPvsh.png",fig)
 
 
 

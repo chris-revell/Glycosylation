@@ -29,25 +29,26 @@ function updateOperator!(L, u, p, t)
 end
 
 # Integral of h*C over space 
+# hᵥ here is dimensionless thickness varying around mean of 1.0 and vertex weights are dimensinless
 function M_tilde(u, W, dims, dν, hᵥ)
     uInternal = reshape(W*hᵥ*u, dims...)
     return sum(uInternal, dims=(2:length(dims)))./dν
 end
 
 # Dimensional bulk functional mass integrated over space and polymerisation 
-function M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)
-    Ω = π*mean(hᵥ) # Non-dimensionalised Ωperp is always π
-    uInternal = reshape(W*hᵥ*u, dims...)
+function M_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)
     M̃ = M_tilde(u, W, dims, dν, hᵥ)
-    Mϕ = dν*sum(M̃[round(Int, ϕ*dims[1]) : dims[1]])
+    Mϕ = dν*sum(M̃[ceil(Int, ϕ*dims[1]) : dims[1]])
     prefactor = α_C*C_b*Ω/(π*(1+α_C))
     return prefactor*Mϕ
 end
 
-P_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b, Tᵣ) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣ #Dimensional or non-dimensionalised time?
+P_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ, Tᵣ) = M_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)/Tᵣ #Dimensional or non-dimensionalised time?
 # P_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣstar #Dimensional or non-dimensionalised time?
 
-function 𝓟starUniform(N, h₀, 𝓒, ϕ, E₀, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ)
+function 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, K₃, K₄, Ωperp, h₀, h_C, h_S, Δ)
+# function 𝓟starUniform(𝓒, ϕ, k₁, 𝓔, Ωperp, N, α_C, σ, K₂, K₃, K₄)
+# function 𝓟starUniform(N, h₀, 𝓒, ϕ, E₀, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ)
 # function 𝓟starUniform(ϕ, 𝓒, 𝓢, E₀, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
 #     𝓔    = 2*Ωperp*E₀
 #     Ω    = h₀*Ωperp
@@ -59,11 +60,14 @@ function 𝓟starUniform(N, h₀, 𝓒, ϕ, E₀, C_b, S_b, Tᵣ, α_C, K₂, K�
 #     K₃   = k₃/k₁
 #     K₄   = k₄/k₁
 #     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-      k₁ = 1.0
-      𝓔    = 2*π*E₀
-      Ω    = h₀*π
-      Ωperp = π
-    return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+    # k₁ = 1.0
+    # 𝓔    = 2*π*E₀
+    # Ω    = h₀*π
+    # Ωperp = π
+    # return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+
+    return (𝓒/(4*ϕ))*(k₁*𝓔/(Ωperp*N))* (h₀/((h₀+h_C)*(h₀+h_C*(1+Δ)))) * (𝓢*Δ*K₃/𝓒 - K₄ - K₄*h₀/h_S)/(1 + 𝓢*Δ*K₃/𝓒 + h₀/h_S) 
+
 end
 
 function homogeneousWidthC(ν̃, K₂, K₄, α_C, β, t)
