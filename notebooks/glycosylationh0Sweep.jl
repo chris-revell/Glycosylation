@@ -72,7 +72,7 @@ h₀s = collect(hMin:5*hMin:hMax)
 
 
 
-Δ = k₁*𝓒/(2.0*k₂*Ωperp)
+# Δ = k₁*𝓒/(2.0*k₂*Ωperp)
 
 dims[2] = dims[2]÷100
 
@@ -101,7 +101,7 @@ for i=1:length(h₀s)
 
     # @show (𝓔*β*Tᵣ < 1+α_C)
 
-    sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432(), nOutputs=200)
+    sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432())
 
     hᵥ = spdiagm(ones(prod(dims)))
     M_stars = Float64[]
@@ -111,13 +111,11 @@ for i=1:length(h₀s)
         Mϕ = sum(M̃[ceil(Int, ϕ*dims[1]) : dims[1]])
         push!(M_stars, Mϕ/sum(M̃))
     end
-    T50 = findfirst(x->x>0.5, M_stars)
-    @show T50
     push!(sols, sol)
-    # push!(PstarsSim, P_star(sol.u[T50], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ, sol.t[T50]))
-    push!(PstarsSim, M_stars[T50]/sol.t[T50])
-    push!(MstarsSim, M_stars[T50])
-    push!(PstarsAnalytic, 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, K₃, K₄, Ωperp, h₀s[i], h_C, h_S, Δ))
+    push!(PstarsSim, P_star(sol.u[end], W, dims, dν, hᵥ, α_C, C_b, Ωs[i], ϕ, Ωperp, k₁, 𝓔, Tᵣ))
+    # push!(PstarsSim, M_stars[end]/sol.t[end])
+    push!(MstarsSim, M_stars[end])
+    push!(PstarsAnalytic, 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, k₂, K₃, K₄, Ωperp, h₀s[i], h_C, h_S))
 end
 
 
@@ -128,7 +126,7 @@ end
 #     derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=false)
 #     @unpack L₀, E₀, h₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β, λ = derivedParams
 #     # push!(PstarsSim, P_star(sol.u[j], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ, sol.t[j]))
-#     # push!(MstarsSim, M_star(sol.u[end], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ))
+#     # push!(MstarsSim, M_star_ϕ(sol.u[end], W, dims, dν, spdiagm(ones(prod(dims))), α_C, C_b, Ωs[i], ϕ))
 #     push!(PstarsAnalytic, 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, K₃, K₄, Ωperp, h₀s[i], h_C, h_S, Δ))
 # end
 

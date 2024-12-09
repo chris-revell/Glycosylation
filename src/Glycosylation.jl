@@ -80,7 +80,26 @@ function hFun(dims; λ=0.1, σ=0.1)
     return mat_h
 end
 
-function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λ=0.1, σ=0.1)
+
+function conditionSteadyState(u, t, integrator)
+    uInternal = reshape(integrator.p.W*integrator.p.hᵥ*u, integrator.p.dims...)
+    M̃ = sum(uInternal, dims=(2:length(integrator.p.dims)))
+    Mϕ = sum(M̃[ceil(Int, 0.5*integrator.p.dims[1]) : integrator.p.dims[1]])
+    Mϕ/sum(M̃) > 0.5 ? true : false
+end
+
+function affectTerminate!(integrator)
+    # if conditionSteadyState() returns true, terminate integrator and pass successful return code
+    println("Terminate at half production")
+    terminate!(integrator, ReturnCode.Success)    
+end
+
+cb = DiscreteCallback(conditionSteadyState, affectTerminate!)
+
+# integrator = init(prob,solver,abstol=1e-7,reltol=1e-4,callback=cb) # Adjust tolerances if you notice unbalanced forces in system that should be at equilibrium
+
+
+function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λ=0.1, σ=0.1, terminateAt="Tᵣ")
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
@@ -179,11 +198,17 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
         matFₑ = matFₑ, 
         K₂ = K₂, 
         dν = dν,
+        W = W,
+        hᵥ = hᵥ,
     )
     fullOperator = MatrixOperator(Esparse*Part1, update_func! = updateOperator!)
     prob = ODEProblem(fullOperator, u0, (0.0, Tᵣ), p)
     println("solving")
-    sol = solve(prob, solver, saveat=Tᵣ/(nOutputs-1), progress=true)#, dt=0.0001)
+    if terminateAt == "halfProduction"
+        sol = solve(prob, solver, progress=true, callback=cb, save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=Tᵣ/(nOutputs-1)
+    else 
+        sol = solve(prob, solver, progress=true, saveat=Tᵣ/(nOutputs-1))#, dt=0.0001) 
+    end
 
     return sol, mat_h
 end

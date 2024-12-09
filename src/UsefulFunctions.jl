@@ -30,44 +30,36 @@ end
 
 # Integral of h*C over space 
 # hᵥ here is dimensionless thickness varying around mean of 1.0 and vertex weights are dimensinless
+# Eq 2.47
 function M_tilde(u, W, dims, dν, hᵥ)
     uInternal = reshape(W*hᵥ*u, dims...)
     return sum(uInternal, dims=(2:length(dims)))./dν
 end
 
+function T_r_star(T̃ᵣ, N, 𝓔, Ω, Ωperp, C_b, S_b, k₁, k₂, k₃, k_Ca, k_Cd, k_Sa, k_Sd)
+    T_r_star =  ((2.0*Ωperp*N^2*T̃ᵣ)/𝓔) *
+        ((2.0*k_Sa*Ωperp + k_Sd*Ω) / (2.0*k_Ca*Ωperp + k_Cd*Ω)) *    
+        (k₁*k_Ca*C_b*Ω) / (k₁*k₂*(2.0*k_Sa*Ωperp + k_Sd*Ω) + k₃*k_Sa*S_b*Ω)
+    return T_r_star
+end
+
 # Dimensional bulk functional mass integrated over space and polymerisation 
-function M_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)
+function M_star_ϕ(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)
     M̃ = M_tilde(u, W, dims, dν, hᵥ)
     Mϕ = dν*sum(M̃[ceil(Int, ϕ*dims[1]) : dims[1]])
     prefactor = α_C*C_b*Ω/(π*(1+α_C))
     return prefactor*Mϕ
 end
 
-P_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ, Tᵣ) = M_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)/Tᵣ #Dimensional or non-dimensionalised time?
-# P_star(u, W, dims, hᵥ, ϕ, α_C, C_b, Ω, dν, Tᵣstar) = M_star(u, W, dims, dν, hᵥ, ϕ, α_C, C_b)/Tᵣstar #Dimensional or non-dimensionalised time?
+function P_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ, Ωperp, k₁, 𝓔, Tᵣ)
+    # Tstar = (2.0*Ωperp*N^2*Tᵣ / 𝓔) * ((2.0*k_Sa*Ωperp + k_Sd*Ω)/(2.0*k_Ca*Ωperp + k_Cd*Ω)) * ((k₁*k_Ca*C_b*Ω)/ (k₁*k₂*(2.0*k_Sa*Ωperp +k_Sd*Ω) + k₃*k_Sa*S_b*Ω))
+    # return M_star_ϕ(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)/Tstar #Dimensional or non-dimensionalised time?
+    return (k₁*𝓔/(2*Ωperp))*M_star_ϕ(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)/Tᵣ 
+end
 
-function 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, K₃, K₄, Ωperp, h₀, h_C, h_S, Δ)
-# function 𝓟starUniform(𝓒, ϕ, k₁, 𝓔, Ωperp, N, α_C, σ, K₂, K₃, K₄)
-# function 𝓟starUniform(N, h₀, 𝓒, ϕ, E₀, C_b, S_b, Tᵣ, α_C, K₂, K₃, K₄, σ)
-# function 𝓟starUniform(ϕ, 𝓒, 𝓢, E₀, h₀, Ωperp, k_Ca, k_Cd, k_Sa, k_Sd, k₁, k₂, k₃, k₄, N, Tᵣstar)
-#     𝓔    = 2*Ωperp*E₀
-#     Ω    = h₀*Ωperp
-#     C_b  = 𝓒/Ω
-#     S_b  = 𝓢/Ω
-#     Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)
-#     α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp)
-#     K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω))
-#     K₃   = k₃/k₁
-#     K₄   = k₄/k₁
-#     σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
-    # k₁ = 1.0
-    # 𝓔    = 2*π*E₀
-    # Ω    = h₀*π
-    # Ωperp = π
-    # return π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
-
-    return (𝓒/(4*ϕ))*(k₁*𝓔/(Ωperp*N))* (h₀/((h₀+h_C)*(h₀+h_C*(1+Δ)))) * (𝓢*Δ*K₃/𝓒 - K₄ - K₄*h₀/h_S)/(1 + 𝓢*Δ*K₃/𝓒 + h₀/h_S) 
-
+function 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, k₂, K₃, K₄, Ωperp, h₀, h_C, h_S)
+    Δ = k₁*𝓒/(2.0*k₂*Ωperp)
+    return (𝓒/(4*ϕ))*(k₁*𝓔/(Ωperp*N))* (h₀/((h₀+h_C)*(h₀+h_C*(1+Δ)))) * ((𝓢*Δ*K₃/𝓒 - K₄ - K₄*h₀/h_S)/(1 + 𝓢*Δ*K₃/𝓒 + h₀/h_S) )
 end
 
 function homogeneousWidthC(ν̃, K₂, K₄, α_C, β, t)
@@ -78,8 +70,9 @@ function homogeneousWidthC(ν̃, K₂, K₄, α_C, β, t)
     return (M/sqrt(4.0*π*D*t))*exp(-ξ^2/(4.0*D*t))
 end
 
+export T_r_star
 export M_tilde
-export M_star
+export M_star_ϕ
 export P_star
 export E!
 export updateOperator!
