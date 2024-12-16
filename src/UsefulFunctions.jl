@@ -6,28 +6,6 @@ using SparseArrays
 using UnPack
 using Statistics
 
-# Integrate over ν to find E field in spatial dimensions.
-# When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
-# Function is agnostic about the whether dims is of length 2 or 3.
-function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
-    # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
-    # cs = selectdim(reshape(u, dims...), 1, 2:(dims[1]-1))
-    uMat = reshape(u, dims...)
-    integ = dν.*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))
-    for slice in eachslice(matE, dims=1)
-        slice .= matFₑ.*(K₂./(K₂ .+ integ))
-    end
-    Esparse[diagind(Esparse)] .= reshape(matE, prod(dims))
-    return nothing
-end
-
-# Function to update linear operator with new values for E at each iteration in solving the ODE system
-function updateOperator!(L, u, p, t)
-    # @unpack Part1, Part2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
-    E!(u, p.dims, p.Esparse, p.matE, p.matFₑ, p.K₂, p.dν)
-    L .= p.Esparse*p.Part1 .+ p.Part2
-end
-
 # Integral of h*C over space 
 # hᵥ here is dimensionless thickness varying around mean of 1.0 and vertex weights are dimensinless
 # Eq 2.47
@@ -74,8 +52,6 @@ export T_r_star
 export M_tilde
 export M_star_ϕ
 export P_star
-export E!
-export updateOperator!
 export 𝓟starUniform
 export homogeneousWidthC
 

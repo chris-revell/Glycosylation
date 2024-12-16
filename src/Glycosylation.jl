@@ -122,7 +122,27 @@ end
 
 cb = DiscreteCallback(conditionSteadyState, affectTerminate!)
 
-# integrator = init(prob,solver,abstol=1e-7,reltol=1e-4,callback=cb) # Adjust tolerances if you notice unbalanced forces in system that should be at equilibrium
+# Integrate over ν to find E field in spatial dimensions.
+# When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
+# Function is agnostic about the whether dims is of length 2 or 3.
+function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
+    # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
+    # cs = selectdim(reshape(u, dims...), 1, 2:(dims[1]-1))
+    uMat = reshape(u, dims...)
+    integ = dν.*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))
+    for slice in eachslice(matE, dims=1)
+        slice .= matFₑ.*(K₂./(K₂ .+ integ))
+    end
+    Esparse[diagind(Esparse)] .= reshape(matE, prod(dims))
+    return nothing
+end
+
+# Function to update linear operator with new values for E at each iteration in solving the ODE system
+function updateOperator!(L, u, p, t)
+    # @unpack Part1, Part2, u0, dims, Esparse, matE, matFₑ, K₂, dν = p
+    E!(u, p.dims, p.Esparse, p.matE, p.matFₑ, p.K₂, p.dν)
+    L .= p.Esparse*p.Part1 .+ p.Part2
+end
 
 function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="Tᵣ")
 
