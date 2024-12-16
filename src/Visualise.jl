@@ -9,128 +9,131 @@ using FromFile
 
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 
-function thicknessPlot(mat_h; subFolder="", folderName="") 
+function thicknessPlot(hᵥ, dims; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
-    fig = Figure(size=(1000,1000))
+    fig = Figure()#size=(500,500))
     ax = Axis(fig[1, 1])
 
-    if ndims(mat_h) == 2
-        ax.xlabel = "x"
-        ax.ylabel = "h"
+    mat_h = reshape([hᵥ[i,i] for i=1:prod(dims)], dims...)
+
+    if length(dims) == 2
+        ax.xlabel = L"x"
+        ax.ylabel = L"h"
         lines!(ax, mat_h[1,:])
         save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
     else
-        ax.xlabel = "x"
-        ax.ylabel = "y"
+        ax.xlabel = L"x"
+        ax.ylabel = L"y"
         heatmap!(ax, mat_h[1,:,:])
         save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
     end
     return nothing 
 end
 
-function concentrationSurfaceMovie(solu, ts, dims; subFolder="", folderName="") 
+function concentrationSurfaceMovie(solu, dims; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
-    fig = Figure(size=(1000,1000))
+    fig = Figure(size=(600,450))
     ax = Axis3(fig[1, 1], aspect=:equal, azimuth=-π/4)
-    ax.xlabel = "ν"
-    ax.ylabel = "x"
-    ax.zlabel = "c"
+    ax.xlabel = L"\nu"
+    ax.ylabel = L"x"
+    ax.zlabel = L"\tilde{C}(x_\perp, \nu)"
     uInternal = Observable(zeros(dims...))
     globalmin = minimum([minimum(u) for u in solu])
     globalmax = maximum([maximum(u) for u in solu])
     zlims!(ax, (globalmin, globalmax))
     clims = (globalmin,globalmax)
-    hidedecorations!(ax)
-    surface!(ax, uInternal, colorrange=clims, colormap=:batlow)
-    record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(ts); framerate=10) do i
+    # hidedecorations!(ax)
+    νs = collect(range(0,1,dims[1]))
+    xs = collect(range(0,π^(1/length(dims)),dims[2]))
+    surface!(ax, νs, xs, uInternal, colorrange=clims, colormap=:batlow)
+    record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(solu); framerate=10) do i
         uInternal[] .= reshape(solu[i], dims...)
         uInternal[] = uInternal[]
     end
     return nothing 
 end
 
-function concentrationHeatmapMovie(solu, ts, dims; subFolder="", folderName="") 
+function concentrationHeatmapMovie(solu, dims; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
-    fig = Figure(size=(1000,1000))
+    fig = Figure(size=(500,500))
     # ax = Axis(fig[1, 1], aspect=:equal)
     ax = Axis(fig[1, 1])
-    ax.xlabel = "ν"
-    ax.ylabel = "x"
+    ax.xlabel = L"\nu"
+    ax.ylabel = L"x"
     uInternal = Observable(zeros(dims...))
     globalmin = minimum([minimum(u) for u in solu])
     globalmax = maximum([maximum(u) for u in solu])
     clims = (globalmin,globalmax)
-    heatmap!(ax, uInternal, colorrange=clims, colormap=:batlow)
-    record(fig, datadir("sims",subFolder,folderName,"concentrationHeatmapMovie.mp4"), 1:length(ts); framerate=10) do i
+    νs = collect(range(0,1,dims[1]))
+    xs = collect(range(0,π^(1/length(dims)),dims[2]))
+    heatmap!(ax, νs, xs, uInternal, colorrange=clims, colormap=:batlow)
+    record(fig, datadir("sims",subFolder,folderName,"concentrationHeatmapMovie.mp4"), 1:length(solu); framerate=10) do i
         uInternal[] .= reshape(solu[i], dims...)
         uInternal[] = uInternal[]
     end
     return nothing 
 end
 
-function spaceIntegralOver_ν_Movie(solu, ts, xs, νs, dims, vertexWeightsMatrix; subFolder="", folderName="")
+function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
-    dν = νs[3]-νs[2]
+    @unpack dims, dν, W, hᵥ = p
     # Find limits
-    uReshaped = reshape((vertexWeightsMatrix*solu[end]), dims...)
-    M = sum(uReshaped, dims=(2,3))
+    M = M_tilde(solu[end], W, dims, dν, hᵥ)
     minima = Float64[]
     maxima = Float64[]
-    for i=1:length(ts)
-        uReshaped .= reshape((vertexWeightsMatrix*solu[i]), dims...)
-        M .= sum(uReshaped, dims=(2,3))./dν
+    for u in solu        
+        M .= M_tilde(u, W, dims, dν, hᵥ)
         push!(minima, minimum(M))
         push!(maxima, maximum(M))
     end
     globalmin = minimum(minima)
     globalmax = maximum(maxima)
 
-    fig = Figure(size=(1000,1000))
+    fig = Figure()#size=(500,500))
     ax = CairoMakie.Axis(fig[1, 1], aspect=1)
-    ax.xlabel = "ν"
-    ax.ylabel = "M, ∱cdxdy"
-    ax.title = "Integral of Cₛ over space against ν"
+    ax.xlabel = L"\nu"
+    ax.ylabel = L"\tilde{M}"
+    # ax.title = "Integral of Cₛ over space against ν"
     M = Observable(zeros(dims[1]))
-    lines!(ax, νs, M)
+    lines!(ax, collect(range(0.0,1.0,dims[1])), M, linewidth=4)
     ylims!(ax, (globalmin, globalmax))
-    record(fig, datadir("sims",subFolder, folderName, "spaceIntegralOver_ν_Movie.mp4"), 1:length(ts); framerate=10) do i
-        uReshaped .= reshape((vertexWeightsMatrix*solu[i]), dims...)
-        M[] .= dropdims((sum(uReshaped, dims=(2,3))), dims=Tuple(collect(2:ndims(uReshaped))))./dν
+    record(fig, datadir("sims",subFolder, folderName, "spaceIntegralOver_ν_Movie.mp4"), 1:length(solu); framerate=10) do i
+        M[] .= M_tilde(solu[i], W, dims, dν, hᵥ)
         M[] = M[]
     end
     save(datadir("sims",subFolder,folderName,"finalSpaceIntegralOver_ν.png"), fig)
     return nothing
 end
 
-function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, vertexWeightsMatrix; subFolder="", folderName="")
-    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+# function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, W; subFolder="", folderName="")
+#     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
 
-    uInternal = reshape((vertexWeightsMatrix*solu[end]), dims...)
-    MsInternal = sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
-    globalmax = maximum(MsInternal)
+#     uInternal = reshape((W*solu[end]), dims...)
+#     MsInternal = sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
+#     globalmax = maximum(MsInternal)
 
-    fig = Figure(size=(1000,1000))
-    ax = CairoMakie.Axis(fig[1, 1], aspect=1)
-    ax.xlabel = "x"
-    ax.ylabel = "y"
-    ax.title = "Useful production P over x and y"
-    M = Observable(zeros(dims[2:3]))
-    heatmap!(ax, M, colorrange=(0.0, globalmax), colormap=:inferno)
-    record(fig, datadir("sims",subFolder,folderName,"productionHeatmap.mp4"), 1:length(solu); framerate=10) do i
-        uInternal .= reshape((vertexWeightsMatrix*solu[i]), dims)
-        MsInternal .= sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
-        M[] .= MsInternal[1,:,:]
-        M[] = M[]
-    end
+#     fig = Figure(size=(1000,1000))
+#     ax = CairoMakie.Axis(fig[1, 1], aspect=1)
+#     ax.xlabel = "x"
+#     ax.ylabel = "y"
+#     ax.title = "Useful production P over x and y"
+#     M = Observable(zeros(dims[2:3]))
+#     heatmap!(ax, M, colorrange=(0.0, globalmax), colormap=:inferno)
+#     record(fig, datadir("sims",subFolder,folderName,"productionHeatmap.mp4"), 1:length(solu); framerate=10) do i
+#         uInternal .= reshape((W*solu[i]), dims)
+#         MsInternal .= sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
+#         M[] .= MsInternal[1,:,:]
+#         M[] = M[]
+#     end
     
-    return nothing
-end
+#     return nothing
+# end
 
 
 export concentrationSurfaceMovie
 export concentrationHeatmapMovie
 export spaceIntegralOver_ν_Movie
-export productionHeatmap3D
+# export productionHeatmap3D
 export thicknessPlot
 
 end

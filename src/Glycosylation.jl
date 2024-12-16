@@ -80,6 +80,32 @@ function hFun(dims; λ=0.1, σ=0.1)
     return mat_h
 end
 
+function hFunGaussian(dims; σ=0.5, μ=0.5)
+    xMax = π^(1/(length(dims)-1))
+    xs   = collect(range(0.0, xMax, dims[2]))
+    σx = xMax*σ
+    μx = xMax*μ
+    if length(dims) == 2
+        mat_hSlice = [1.1 + 0.75*exp(-(x-μx)^2/σx^2) for x in xs]
+        mat_h = zeros(dims...)
+        for i=1:dims[1]
+            selectdim(mat_h, 1, i) .= mat_hSlice
+        end
+        mat_h .= mat_h./mean(mat_h)
+        return mat_h
+    else
+        mat_h = zeros(dims...)
+        for i=1:dims[1]
+            for j=1:dims[2]
+                # selectdim(mat_h, 1, i) .= [0.1 + exp(-(x-μx)^2/σx^2 - (xs[i]-μx)^2/σx^2 ) for x in xs]
+                mat_h[i, j, :] .= [1.1 + 0.75*exp(-(x-μx)^2/σx^2 - (xs[j]-μx)^2/σx^2 ) for x in xs]
+            end
+        end
+        mat_h .= mat_h./mean(mat_h)
+        return mat_h        
+    end
+end
+
 
 function conditionSteadyState(u, t, integrator)
     uInternal = reshape(integrator.p.W*integrator.p.hᵥ*u, integrator.p.dims...)
@@ -98,8 +124,7 @@ cb = DiscreteCallback(conditionSteadyState, affectTerminate!)
 
 # integrator = init(prob,solver,abstol=1e-7,reltol=1e-4,callback=cb) # Adjust tolerances if you notice unbalanced forces in system that should be at equilibrium
 
-
-function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λ=0.1, σ=0.1, terminateAt="Tᵣ")
+function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="Tᵣ")
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
@@ -149,7 +174,13 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
 
     # Diagonal matrices of compartment thickness h over all vertices hᵥ
     # Also diagonal matrix of thickness over edges, formed by taking mean of h at adjacent vertices 0.5.*Ā*hᵥ
-    thickness=="GRF" ? mat_h = hFun(dims, λ=λ, σ=σ) : mat_h = ones(dims...)
+    if thickness=="GRF"
+        mat_h = hFun(dims, λ=λGRF, σ=σGRF)
+    elseif thickness=="Gaussian"
+        mat_h = hFunGaussian(dims, σ=σGaussian, μ=μGaussian)
+    else 
+        mat_h = ones(dims...)
+    end
     hᵥ_vec = reshape(mat_h, nVerts)         # Cisternal thickness evaluated over vertices 
     hₑ_vec = 0.5.*Ā*hᵥ_vec                  # Cisternal thickness evaluated over edges (mean of adjacent vertices)
     hᵥ = spdiagm(hᵥ_vec)                    # Cisternal thickness over vertices, as a sparse diagonal matrix
@@ -168,7 +199,13 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
     
     # Set value of Fₑ at each point in space
     # Integral of Fₑ over space is π
-    matFₑTmp = ones(Float64, dims[Not(1)]...)
+    if fDist == "uniform"
+        matFₑ = ones(Float64, dims[Not(1)]...)
+        matFₑTmp = copy(matFₑ)
+    else
+        matFₑ = selectdim(hFunGaussian(dims, σ=σGaussian, μ=μGaussian), 1, 1)
+        matFₑTmp = copy(matFₑ)
+    end
     for i=1:length(size(matFₑTmp))
         selectdim(matFₑTmp, i, 1) .*= 0.5
         selectdim(matFₑTmp, i, size(matFₑTmp)[i]) .*= 0.5
@@ -177,8 +214,9 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
     
     # Ensure integral of Fₑ over space is π
     # matFₑ = (1/integF).*ones(Float64, dims[Not(1)]...)
-    matFₑ = ones(Float64, dims[Not(1)]...)
+    matFₑ .*= π/integF
     matE = zeros(dims...)
+
     Esparse = spzeros(nVerts, nVerts)
     E!(u0, dims, Esparse, matE, matFₑ, K₂, spacing[1])
 
@@ -210,9 +248,9 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
         sol = solve(prob, solver, progress=true, saveat=Tᵣ/(nOutputs-1))#, dt=0.0001) 
     end
 
-    return sol, mat_h
+    return sol, p
 end
 
-export glycosylationAnyD, hFun
+export glycosylationAnyD, hFun, hFunGaussian
 
 end

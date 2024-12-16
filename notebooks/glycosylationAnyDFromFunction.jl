@@ -13,6 +13,7 @@ using XLSX
 using DataFrames
 using Interpolations
 using Statistics
+using JLD2
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("Visualise.jl"))" using Visualise
@@ -23,18 +24,16 @@ using Statistics
 
 #%%
 
-thicknessProfile = "uniform"
+thicknessProfile = "GRF"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
-σ = 0.1
-
+σGRF = 0.2
 
 nSpatialDims = 2
 Ngrid = 201
-# dims = [Ngrid,2]
 dims = fill(Ngrid, nSpatialDims+1)
-# dims[1] = 01
+
 #%%
 
 h₀ = 0.1
@@ -54,7 +53,7 @@ k₄    = 0.1  # Product dissociation
 𝓔     = 0.0001
 D_C   = 0.0000001  # Monomer/polymer diffusivity
 D_S   = 0.0000001  # Substrate diffusivity
-Tᵣstar= 1000000000.0  # Release time
+Tᵣstar= 0.75*1000000000.0  # Release time
 ϕ     = 0.5
 
 #%%
@@ -64,54 +63,62 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 
 #%%
 
-sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σ=σ)
-println("finished sim")
-
-#%%
-
 # Create directory for run data labelled with current time.
-# paramsName = @savename nSpatialDims K₂ K₃ K₄ α_C δ_C σ N β 𝓓 Tᵣ h₀ Ωperp 𝓒
 paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
-subFolder = ""
+subFolder = "1DGRFExamples"
 mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-xMax = 0.01*π^(1/nSpatialDims)
-xs   = collect(range(0.0, xMax, dims[2]))
-dx   = xs[2]-xs[1]
-if nSpatialDims > 1 
-    yMax = xMax
-    ys   = collect(range(0.0, yMax, dims[3]))
-    dy   = ys[2]-ys[1]
-end
-νMax = 1.0
-νs   = collect(range(0.0, νMax, dims[1]))
-dν   = νs[2]-νs[1]
-nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
-W = vertexVolumeWeightsMatrix(dims, spacing)
+sol, p = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF)
+println("finished sim")
+
+#%%
+
+jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol, p)
 
 #%%
 
 if nSpatialDims==1
-    concentrationSurfaceMovie(sol.u, sol.t, dims; subFolder=subFolder, folderName=folderName)
-    concentrationHeatmapMovie(sol.u, sol.t, dims; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
+    concentrationSurfaceMovie(sol.u, dims; subFolder=subFolder, folderName=folderName)
+    concentrationHeatmapMovie(sol.u, dims; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
-        thicknessPlot(mat_h; subFolder=subFolder, folderName=folderName)
+        thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
     end
 else
-    spaceIntegralOver_ν_Movie(sol.u, sol.t, xs, νs, dims, W; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     uSlices = [selectdim(reshape(u, dims...), 3, dims[3]÷2) for u in sol.u]
     uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
-    concentrationSurfaceMovie(uSlicesReshaped, sol.t, dims[1:2]; subFolder=subFolder, folderName=folderName)
-    concentrationHeatmapMovie(uSlicesReshaped, sol.t, dims[1:2]; subFolder=subFolder, folderName=folderName)
+    concentrationSurfaceMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
+    concentrationHeatmapMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
-        thicknessPlot(mat_h; subFolder=subFolder, folderName=folderName)
+        thicknessPlot(hᵥ, dims; subFolder=subFolder, folderName=folderName)
     end
 end
+
+
+# fig = Figure(size=(500,500))
+
+# ax2 = CairoMakie.Axis(fig[1, 1])#, aspect=1)
+# ax2.xlabel = "t"
+# ax2.ylabel = L"M_\phi"
+# xlims!(ax2, (0.0, sol.t[end]))
+# ylims!(ax2, (0.0, M_star_ϕ(sol.u[end], p.W, dims, p.dν, p.hᵥ, α_C, C_b, Ω, ϕ)))
+
+# Ms = Observable(zeros(length(sol.t)))
+# Ts = Observable(zeros(length(sol.t)))
+# l3 = lines!(ax2, Ts, Ms, linewidth=4)
+
+# record(fig, datadir("sims",subFolder,folderName,"usefulProduction.mp4"), 1:length(sol.t); framerate=50) do i
+#     Ts[][i] = sol.t[i]
+#     Ts[] = Ts[]        
+#     Mϕ = M_star_ϕ(sol.u[i], p.W, dims, p.dν, p.hᵥ, α_C, C_b, Ω, ϕ)
+#     Ms[][i] = Mϕ
+#     Ms[] = Ms[]
+# end
 
 
 # W = vertexVolumeWeightsMatrix(dims, spacing)
@@ -154,3 +161,4 @@ end
 
 # h₀ = 2*h_C
 # Ω = h₀*Ωperp
+# nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]

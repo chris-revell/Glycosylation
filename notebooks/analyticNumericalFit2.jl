@@ -55,7 +55,7 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 #%%
 
 # sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432(), nOutputs=500)#NDBLSRK124()) 
-sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=SSPRK432(), nOutputs=500)
+sol, p = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=SSPRK432(), nOutputs=500)
 println("finished sim")
 
 #%%
@@ -69,20 +69,18 @@ mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-xMax = π^(1/nSpatialDims)
-xs   = collect(range(0.0, xMax, dims[2]))
-dx   = xs[2]-xs[1]
-if nSpatialDims > 1 
-    yMax = xMax
-    ys   = collect(range(0.0, yMax, dims[3]))
-    dy   = ys[2]-ys[1]
-end
+# xMax = π^(1/nSpatialDims)
+# xs   = collect(range(0.0, xMax, dims[2]))
+# dx   = xs[2]-xs[1]
+# if nSpatialDims > 1 
+#     yMax = xMax
+#     ys   = collect(range(0.0, yMax, dims[3]))
+#     dy   = ys[2]-ys[1]
+# end
 νMax = 1.0
 νs   = collect(range(0.0, νMax, dims[1]))
-dν   = νs[2]-νs[1]
-nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
-W = vertexVolumeWeightsMatrix(dims, spacing)
-
+# dν   = νs[2]-νs[1]
+# nSpatialDims == 1 ? spacing  = [p.dν, dx] : spacing  = [p.dν, dx, dy]
 
 #%%
 
@@ -98,8 +96,6 @@ tsOffset = sol.t.-t₀
 firstPositivetIndex = findfirst(x->x>0, tsOffset)
 
 #%%
-
-hᵥ = spdiagm(reshape(mat_h, prod(dims)))
 
 fig = Figure(size=(1000,1000))
 ax = CairoMakie.Axis(fig[1, 1])#, aspect=1)
@@ -118,7 +114,7 @@ ax2 = CairoMakie.Axis(fig[2, 1])#, aspect=1)
 ax2.xlabel = "t"
 ax2.ylabel = "Mϕ"
 xlims!(ax2, (0.0, sol.t[end]))
-ylims!(ax2, (0.0, M_star_ϕ(sol.u[end], W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)))
+ylims!(ax2, (0.0, M_star_ϕ(sol.u[end], p.W, dims, p.dν, p.hᵥ, α_C, C_b, Ω, ϕ)))
 Ms = Observable(zeros(length(sol.t)))
 Ts = Observable(zeros(length(sol.t)))
 l3 = lines!(ax2, Ts, Ms)
@@ -134,7 +130,7 @@ record(fig, datadir("sims",subFolder, folderName, "analyticCs.mp4"), 1:length(so
 
         Ts[][i] = sol.t[i]
         Ts[] = Ts[]        
-        Mϕ = M_star_ϕ(sol.u[i], W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)
+        Mϕ = M_star_ϕ(sol.u[i], p.W, dims, p.dν, p.hᵥ, α_C, C_b, Ω, ϕ)
         Ms[][i] = Mϕ
         Ms[] = Ms[]
     end
@@ -187,10 +183,10 @@ ax.xlabel = L"\nu"
 ax.ylabel = L"C"
 
 ax2 = Axis(fig[2,1])
-# ylims!(ax2, (0.0, M_star_ϕ(sol.u[end], W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)))
+# ylims!(ax2, (0.0, M_star_ϕ(sol.u[end], p.W, dims, p.dν, p.hᵥ, α_C, C_b, Ω, ϕ)))
 l3 = lines!(ax2, Ts, Ms[]./Ms[][end], linewidth=4, color=(:black, 1.0))
 ax2.xlabel = "Time"
-ax2.ylabel = L"M_\phi"
+ax2.ylabel = L"M^*_\phi"
 
 save(datadir("sims", subFolder, folderName, "analyticComparisonν_0=$(@sprintf("%f", ν₀))t_0=$(@sprintf("%f", t₀)).png"), fig)
 display(fig)
