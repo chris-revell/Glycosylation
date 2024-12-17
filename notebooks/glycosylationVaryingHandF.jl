@@ -14,6 +14,7 @@ using DataFrames
 using Interpolations
 using Statistics
 using JLD2
+using LinearAlgebra
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("Visualise.jl"))" using Visualise
@@ -57,19 +58,46 @@ D_S   = 0.0000001  # Substrate diffusivity
 Tᵣstar= 1000000000.0  # Release time
 ϕ     = 0.5
 
-xMax = π^(1/nSpatialDims)
-xs   = collect(range(0.0, xMax, dims[2]))
-# dx   = xs[2]-xs[1]
-if nSpatialDims > 1 
-    yMax = xMax
-    ys   = collect(range(0.0, yMax, dims[3]))
-    # dy   = ys[2]-ys[1]
-end
-νMax = 1.0
-νs   = collect(range(0.0, νMax, dims[1]))
-# dν   = νs[2]-νs[1]
-# nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
-# W = vertexVolumeWeightsMatrix(dims, spacing)
+rawParams = (
+    thicknessProfile = thicknessProfile,
+    differencing = differencing,
+    solver = solver,
+    nOutputs = nOutputs,
+    # σGRF = σGRF,
+    nSpatialDims = nSpatialDims,
+    Ngrid = Ngrid,
+    dims = dims,
+    h₀ = h₀,
+    Ωperp = Ωperp,
+    Ω = Ω,
+    N = N,
+    k_Cd = k_Cd,
+    k_Ca = k_Ca,
+    k_Sd = k_Sd,
+    k_Sa = k_Sa,
+    k₁ = k₁,
+    k₂ = k₂,
+    k₃ = k₃,
+    k₄ = k₄,
+    𝓒 = 𝓒,
+    𝓢 = 𝓢,
+    𝓔 = 𝓔,
+    D_C = D_C,
+    D_S = D_S,
+    Tᵣstar = Tᵣstar,
+    ϕ = ϕ
+)
+
+# xMax = π^(1/nSpatialDims)
+# xs   = collect(range(0.0, xMax, dims[2]))
+# # dx   = xs[2]-xs[1]
+# if nSpatialDims > 1 
+#     yMax = xMax
+#     ys   = collect(range(0.0, yMax, dims[3]))
+#     # dy   = ys[2]-ys[1]
+# end
+# νMax = 1.0
+# νs   = collect(range(0.0, νMax, dims[1]))
 
 #%%
 
@@ -77,7 +105,6 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 @unpack L₀, E₀, h₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β, λ = derivedParams
 
 #%%
-
 
 # Create directory for run data labelled with current time.
 # paramsName = @savename nSpatialDims K₂ K₃ K₄ α_C δ_C σ N β 𝓓 Tᵣ h₀ Ωperp 𝓒
@@ -92,100 +119,22 @@ mkpath(datadir("sims",subFolder,folderName))
 sol1, p1 = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
 println("finished sim")
 
-# @unpack hᵥ, matFₑ, W = p
-mat_h = reshape([p1.hᵥ[i,i] for i=1:prod(dims)], dims...)
+mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(dims)], dims...)
 
 #%%
 
-jldsave(datadir("sims",subFolder,folderName,"solutionHVariation.jld2"); sol1, p1)
-
-#%%
-
-# globalmin = minimum([minimum(u) for u in sol1.u[4:end]])
-# globalmax = maximum([maximum(u) for u in sol1.u[4:end]])
-# clims = (globalmin,globalmax)
-# # frames = collect(4:48:100)
-# frames = collect(1:40:100)
-# fig = Figure()#size=(1000,500))
-# axesVec = [Axis(fig[1,1])]
-# lines!(axesVec[1], mat_h[1,:], xs)
-# xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h[1,:])))
-# ylims!(axesVec[1], (0.0, xMax))
-# for x=2:4
-#     uInternal = reshape(sol1.u[frames[x-1]], dims...)
-#     push!(axesVec, Axis(fig[1,x]))
-#     axesVec[end].title = "t = $(@sprintf("%.2f", sol1.t[frames[x-1]]))"
-#     # heatmap!(axesVec[end], νs, xs, uInternal, colorrange=clims, colormap=:batlow)
-#     heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
-#     xlims!(axesVec[end], (0.0,1.0))
-#     ylims!(axesVec[end], (0.0,xMax))
-#     push!(axesVec, Axis(fig[2,x]))
-#     M = M_tilde(sol1.u[frames[x-1]], p1.W, dims, p1.dν, p1.hᵥ)[:,1]
-#     lines!(axesVec[end], νs, M)
-#     xlims!(axesVec[end], (0.0,1.0))
-# end
-# axesVec[1].xlabel = L"h"
-# axesVec[1].ylabel = "x"
-# for ax in axesVec[2:2:end]
-#     ax.xlabel = L"\nu"
-#     ax.ylabel = L"x"
-# end
-# for ax in axesVec[3:2:end]
-#     ax.xlabel = L"\nu"
-#     ax.ylabel = L"M"
-# end
-# # display(fig)
-# save(datadir("sims",subFolder,folderName,"2DhVariation.png"), fig)
+jldsave(datadir("sims",subFolder,folderName,"solutionHVariation.jld2"); sol1, p1, rawParams)
 
 #%%
 
 sol2, p2 = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
 println("finished sim 2")
 
-# @unpack hᵥ, matFₑ, W = p2
-# mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(dims)], dims...)
+mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(dims)], dims...)
 
 #%%
 
-jldsave(datadir("sims",subFolder,folderName,"solutionFVariation.jld2"); sol2, p2)
-
-#%%
-
-# globalmin = minimum([minimum(u) for u in sol2.u[4:end]])
-# globalmax = maximum([maximum(u) for u in sol2.u[4:end]])
-# clims = (globalmin,globalmax)
-# # frames = collect(4:48:100)
-# frames = collect(1:40:100)
-# fig = Figure()#size=(1000,500))
-# axesVec = [Axis(fig[1,1])]
-# lines!(axesVec[1], p2.matFₑ, xs)
-# xlims!(axesVec[1], (0.0, 1.2*maximum(p2.matFₑ)))
-# ylims!(axesVec[1], (0.0, xMax))
-# axesVec[1].xlabel = L"F_e"
-# axesVec[1].ylabel = L"x"
-# for x=2:4
-#     uInternal = reshape(sol2.u[frames[x-1]], dims...)
-#     push!(axesVec, Axis(fig[1,x]))
-#     axesVec[end].title = "t = $(@sprintf("%.2f", sol2.t[frames[x-1]]))"
-#     # heatmap!(axesVec[end], νs, xs, uInternal, colorrange=clims, colormap=:batlow)
-#     heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
-#     xlims!(axesVec[end], (0.0,1.0))
-#     ylims!(axesVec[end], (0.0,xMax))
-#     push!(axesVec, Axis(fig[2,x]))
-#     M = M_tilde(sol2.u[frames[x-1]], p.W, dims, p2.dν, p2.hᵥ)[:,1]
-#     lines!(axesVec[end], νs, M)
-#     xlims!(axesVec[end], (0.0,1.0))
-# end
-# for ax in axesVec[2:2:end]
-#     ax.xlabel = L"\nu"
-#     ax.ylabel = L"x"
-# end
-# for ax in axesVec[3:2:end]
-#     ax.xlabel = L"\nu"
-#     ax.ylabel = L"\tilde{M}"
-# end
-# # display(fig)
-# save(datadir("sims",subFolder,folderName,"2DFVariation.png"), fig)
+jldsave(datadir("sims",subFolder,folderName,"solutionFVariation.jld2"); sol2, p2, rawParams)
 
 #%%
 
@@ -193,12 +142,16 @@ jldsave(datadir("sims",subFolder,folderName,"solutionFVariation.jld2"); sol2, p2
 frames = collect(1:40:100)
 fig = Figure(size=(1000,1000))
 
+νs = collect(range(0.0, 1.0, dims[1]))
+xMax = π^(1/nSpatialDims)
+xs = collect(range(0.0, xMax, dims[2]))
+
 # globalmin1 = minimum([minimum(u) for u in sol1.u[4:end]])
 # globalmax1 = maximum([maximum(u) for u in sol1.u[4:end]])
 # # # clims1 = (globalmin1,globalmax1)
 axesVec = [Axis(fig[1,1])]
-lines!(axesVec[1], mat_h[1,:], xs)
-xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h[1,:])))
+lines!(axesVec[1], mat_h1[1,:], xs)
+xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h1[1,:])))
 ylims!(axesVec[1], (0.0, xMax))
 for x=2:4
     uInternal = reshape(sol1.u[frames[x-1]], dims...)
@@ -244,17 +197,9 @@ for x=2:4
     xlims!(axesVec[end], (0.0,1.0))
     ylims!(axesVec[end], (0.0,xMax))
     push!(axesVec, Axis(fig[4,x]))
-    M = M_tilde(sol2.u[frames[x-1]], p.W, dims, p2.dν, p2.hᵥ)[:,1]
+    M = M_tilde(sol2.u[frames[x-1]], p2.W, dims, p2.dν, p2.hᵥ)[:,1]
     lines!(axesVec[end], νs, M)
     xlims!(axesVec[end], (0.0,1.0))
-end
-for ax in axesVec[9:2:end]
-    ax.xlabel = L"\nu"
-    ax.ylabel = L"x"
-end
-for ax in axesVec[10:2:end]
-    ax.xlabel = L"\nu"
-    ax.ylabel = L"\tilde{M}"
 end
 
 linkxaxes!(axesVec[2], axesVec[3:7])
@@ -267,3 +212,82 @@ linkyaxes!(axesVec[10], axesVec[12:2:end])
 
 display(fig)
 save(datadir("sims",subFolder,folderName,"2DFandHVariation.png"), fig)
+
+
+#%%
+
+subFigs = []
+subAxes = []
+push!(subFigs, Figure(size=(250,250)))
+push!(subAxes, Axis(subFigs[end][1,1]))
+lines!(subAxes[end], mat_h1[1,:], xs)
+xlims!(subAxes[end], (0.0, 1.2*maximum(mat_h1[1,:])))
+ylims!(subAxes[end], (0.0, xMax))
+subAxes[1].xlabel = L"h"
+subAxes[1].ylabel = L"x"
+save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
+for x=2:4
+    uInternal = reshape(sol1.u[frames[x-1]], dims...)
+    push!(subFigs, Figure(size=(250,250)))
+    push!(subAxes, Axis(subFigs[end][1,1]))
+    # subAxes[end].title = "t = $(@sprintf("%.2f", sol1.t[frames[x-1]]))"
+    Label(fig[1,x, Top()], "t = $(@sprintf("%.2f", sol1.t[frames[x-1]]))")
+    # heatmap!(subAxes[end], νs, xs, uInternal, colorrange=clims, colormap=:batlow)
+    heatmap!(subAxes[end], νs, xs, uInternal, colormap=:batlow)
+    xlims!(subAxes[end], (0.0,1.0))
+    ylims!(subAxes[end], (0.0,xMax))
+    subAxes[end].xlabel = L"\nu"
+    subAxes[end].xlabel = L"x"
+    for ax in subAxes[3:2:end]
+        ax.xlabel = L"\nu"
+        ax.ylabel = L"\tilde{M}"
+    end
+    save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
+
+    push!(subFigs, Figure(size=(250,250)))
+    push!(subAxes, Axis(subFigs[end][1,1]))
+    M = M_tilde(sol1.u[frames[x-1]], p1.W, dims, p1.dν, p1.hᵥ)[:,1]
+    lines!(subAxes[end], νs, M)
+    xlims!(subAxes[end], (0.0,1.0))
+    ylims!(subAxes[end], (0.0,175.0))
+    subAxes[end].xlabel = L"\nu"
+    subAxes[end].xlabel = L"\tilde{M}"
+    # linkyaxes!(axesVec[3], axesVec[end])
+    save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
+end
+
+# globalmin2 = minimum([minimum(u) for u in sol2.u[4:end]])
+# globalmax2 = maximum([maximum(u) for u in sol2.u[4:end]])
+# # # clims2 = (globalmin2,globalmax2)
+push!(subAxes, Axis(subFigs[end][1,1]))
+lines!(subAxes[end], p2.matFₑ, xs)
+xlims!(subAxes[end], (0.0, 1.2*maximum(p2.matFₑ)))
+ylims!(subAxes[end], (0.0, xMax))
+subAxes[end].xlabel = L"F_e"
+subAxes[end].ylabel = L"x"
+save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
+for x=2:4
+    uInternal = reshape(sol2.u[frames[x-1]], dims...)
+    push!(subFigs, Figure(size=(250,250)))
+    push!(subAxes, Axis(subFigs[end][1,1]))
+    # subAxes[end].title = "t = $(@sprintf("%.2f", sol2.t[frames[x-1]]))"
+    Label(fig[3,x, Top()], "t = $(@sprintf("%.2f", sol2.t[frames[x-1]]))")
+    # heatmap!(subAxes[end], νs, xs, uInternal, colorrange=clims, colormap=:batlow)
+    heatmap!(subAxes[end], νs, xs, uInternal, colormap=:batlow)
+    xlims!(subAxes[end], (0.0,1.0))
+    ylims!(subAxes[end], (0.0,xMax))
+    subAxes[end].xlabel = L"\nu"
+    subAxes[end].xlabel = L"x"
+    save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
+
+    push!(subFigs, Figure(size=(250,250)))
+    push!(subAxes, Axis(subFigs[end][1,1]))
+    M = M_tilde(sol2.u[frames[x-1]], p2.W, dims, p2.dν, p2.hᵥ)[:,1]
+    lines!(subAxes[end], νs, M)
+    xlims!(subAxes[end], (0.0,1.0))
+    subAxes[end].xlabel = L"\nu"
+    subAxes[end].xlabel = L"\tilde{M}"
+    ylims!(subAxes[end], (0.0,175.0))
+    # linkyaxes!(axesVec[3], axesVec[end])
+    save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
+end

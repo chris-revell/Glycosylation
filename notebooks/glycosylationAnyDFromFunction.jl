@@ -77,7 +77,37 @@ println("finished sim")
 
 #%%
 
-jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol, p)
+rawParams = (
+    thicknessProfile = thicknessProfile,
+    differencing = differencing,
+    solver = solver,
+    nOutputs = nOutputs,
+    σGRF = σGRF,
+    nSpatialDims = nSpatialDims,
+    Ngrid = Ngrid,
+    dims = dims,
+    h₀ = h₀,
+    Ωperp = Ωperp,
+    Ω = Ω,
+    N = N,
+    k_Cd = k_Cd,
+    k_Ca = k_Ca,
+    k_Sd = k_Sd,
+    k_Sa = k_Sa,
+    k₁ = k₁,
+    k₂ = k₂,
+    k₃ = k₃,
+    k₄ = k₄,
+    𝓒 = 𝓒,
+    𝓢 = 𝓢,
+    𝓔 = 𝓔,
+    D_C = D_C,
+    D_S = D_S,
+    Tᵣstar = Tᵣstar,
+    ϕ = ϕ
+)
+
+jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol, p, rawParams)
 
 #%%
 

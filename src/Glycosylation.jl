@@ -47,6 +47,7 @@ using DataFrames
 using Statistics
 using InvertedIndices
 using GaussianRandomFields
+using LinearAlgebra
 
 @from "$(srcdir("MakeIncidenceMatrix.jl"))" using MakeIncidenceMatrix
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
