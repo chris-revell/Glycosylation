@@ -10,7 +10,7 @@ using FromFile
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 
 function thicknessPlot(hᵥ, dims; subFolder="", folderName="") 
-    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
     fig = Figure()#size=(500,500))
     ax = Axis(fig[1, 1])
 
@@ -31,7 +31,7 @@ function thicknessPlot(hᵥ, dims; subFolder="", folderName="")
 end
 
 function concentrationSurfaceMovie(solu, dims; subFolder="", folderName="") 
-    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
     fig = Figure(size=(600,450))
     ax = Axis3(fig[1, 1], aspect=:equal, azimuth=-π/4)
     ax.xlabel = L"\nu"
@@ -54,7 +54,7 @@ function concentrationSurfaceMovie(solu, dims; subFolder="", folderName="")
 end
 
 function concentrationHeatmapMovie(solu, dims; subFolder="", folderName="") 
-    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
     fig = Figure(size=(500,500))
     # ax = Axis(fig[1, 1], aspect=:equal)
     ax = Axis(fig[1, 1])
@@ -75,7 +75,7 @@ function concentrationHeatmapMovie(solu, dims; subFolder="", folderName="")
 end
 
 function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
-    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+    isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
     @unpack dims, dν, W, hᵥ = p
     # Find limits
     M = M_tilde(solu[end], W, dims, dν, hᵥ)
@@ -106,7 +106,7 @@ function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
 end
 
 # function productionHeatmap3D(ϕ, solu, ts, xs, νs, dims, W; subFolder="", folderName="")
-#     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkdir(datadir("sims", subFolder, folderName))
+#     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
 
 #     uInternal = reshape((W*solu[end]), dims...)
 #     MsInternal = sum(uInternal[round(Int64, ϕ*dims[1]):end, :, :], dims=1)
