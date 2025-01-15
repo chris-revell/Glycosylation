@@ -81,25 +81,11 @@ MstarsPhiSim = []
 sols = []
 for i=1:length(h₀s)
     @show h₀s[i]
-    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=false)
-    @unpack L₀, E₀, h₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β, λ = derivedParams
-
-    sol, p = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction")
-    # integrator, p = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, subFolder, folderName, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF)
-    # hᵥ = spdiagm(ones(prod(dims)))
-    # M_stars = Float64[]
-    # for u in sol.u
-    #     uInternal = reshape(W*hᵥ*u, dims...)
-    #     M̃ = sum(uInternal, dims=(2:length(dims)))
-    #     Mϕ = sum(M̃[ceil(Int, ϕ*dims[1]) : dims[1]])
-    #     push!(M_stars, Mϕ/sum(M̃))
-    # end
-
-    push!(sols, sol)
     
-    push!(PstarsSim, P_star(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ωs[i], ϕ, Ωperp, k₁, 𝓔, sol.t[end]))
+    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=false)
+    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β = derivedParams
 
-    push!(MstarsPhiSim, M_star_ϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ωs[i], ϕ))
+    sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction")
 
     # push!(PstarsAnalytic, 𝓟starUniform(𝓒, 𝓔, 𝓢, ϕ, N, k₁, k₂, K₃, K₄, Ωperp, h₀s[i], h_C, h_S))
 end

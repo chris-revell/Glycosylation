@@ -34,7 +34,9 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
     𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)    # Dimensionless parameter on diffusion term, derived from combination of other terms
     β    = N*(σ*K₃ - K₂*K₄)           # Dimensionless parameter on advection term, derived from combination of other terms 
 
-    λ = (𝓢/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
+    T̃ᵣ   = Tᵣ/((N^2)*(K₂+σ*K₃))
+
+    # λ = (𝓢/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
 
     if checks 
         println("Small aspect ratio: Ω² << Ω⟂³min(1, D_C/k₁𝓔, D_S/k₁𝓔)")
@@ -91,19 +93,19 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
         printstyled("$(isapprox(K₄, 1.0, rtol=0.1))"; color = (isapprox(K₄, 1.0, rtol=0.1) ? :green : :red))
         println("")
 
-        println("λ > 1")
-        println("λ = $(λ)")
-        printstyled("$(λ>1)"; color = (λ>1) ? :green : :red)
-        println("")
+        # println("λ > 1")
+        # println("λ = $(λ)")
+        # printstyled("$(λ>1)"; color = (λ>1) ? :green : :red)
+        # println("")
 
-        println("h₀ < 2k_Sa(λ-1)/k_Sd")
-        println("h₀ = $(h₀), 2k_Sa(λ-1)/k_Sd = $(2.0*k_Sa*(λ-1)/k_Sd)")
-        printstyled("$(h₀<(2.0*k_Sa*(λ-1)/k_Sd))"; color = (h₀<(2.0*k_Sa*(λ-1)/k_Sd)) ? :green : :red)
-        println("")
+        # println("h₀ < 2k_Sa(λ-1)/k_Sd")
+        # println("h₀ = $(h₀), 2k_Sa(λ-1)/k_Sd = $(2.0*k_Sa*(λ-1)/k_Sd)")
+        # printstyled("$(h₀<(2.0*k_Sa*(λ-1)/k_Sd))"; color = (h₀<(2.0*k_Sa*(λ-1)/k_Sd)) ? :green : :red)
+        # println("")
 
     end
 
-    return Dict("L₀"=>L₀, "E₀"=>E₀, "h₀"=>h₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β, "λ"=>λ)
+    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β) #, "λ"=>λ)
 end 
 
 export derivedParameters
