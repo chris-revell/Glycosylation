@@ -2,7 +2,7 @@ nSpatialDims = 1
 Ngrid = 401
 dims  = fill(Ngrid, nSpatialDims+1)
 
-Tᵣ = 30.0
+T̃ᵣ = 30.0
 K₂ = 1.0
 K₄ = 0.0001
 α_C = 1.0

@@ -49,7 +49,7 @@ using InvertedIndices
 
 differencing = "centre"
 nSpatialDims = 1
-Tᵣ = 30.0
+T̃ᵣ = 30.0
 K₂ = 1.0
 K₄ = 0.0001
 α_C = 1.0
@@ -61,15 +61,15 @@ dims = [Ngrid,2]
 
 #%%
 
-# sol = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing=differencing) 
-solCentre = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432())#NDBLSRK124()) 
-solUpstream = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432())#NDBLSRK124()) 
+# sol = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing=differencing) 
+solCentre = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432())#NDBLSRK124()) 
+solUpstream = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432())#NDBLSRK124()) 
 println("finished sim")
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ differencing
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 subFolder = "analyticNumericFit"

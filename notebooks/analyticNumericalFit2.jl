@@ -54,14 +54,13 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 
 #%%
 
-# sol, mat_h = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432(), nOutputs=500)#NDBLSRK124()) 
 sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=SSPRK432(), nOutputs=500)
 println("finished sim")
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ thicknessProfile differencing
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 subFolder = "analyticNumericFit"
@@ -195,7 +194,7 @@ display(fig)
 @show α_C
 @show t₀
 @show ν₀
-@show Tᵣ
+@show T̃ᵣ
 @show K₂
 @show K₄
 @show 𝓓

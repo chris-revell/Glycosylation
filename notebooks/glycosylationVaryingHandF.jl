@@ -107,8 +107,7 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 #%%
 
 # Create directory for run data labelled with current time.
-# paramsName = @savename nSpatialDims K₂ K₃ K₄ α_C δ_C σ N β 𝓓 Tᵣ h₀ Ωperp 𝓒
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ differencing
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 subFolder = "VaryingHandF"
@@ -116,7 +115,7 @@ mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-sol1, p1 = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
+sol1, p1 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
 println("finished sim")
 
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(dims)], dims...)
@@ -127,7 +126,7 @@ jldsave(datadir("sims",subFolder,folderName,"solutionHVariation.jld2"); sol1, p1
 
 #%%
 
-sol2, p2 = glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
+sol2, p2 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
 println("finished sim 2")
 
 mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(dims)], dims...)

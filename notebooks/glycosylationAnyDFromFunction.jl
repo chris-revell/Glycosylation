@@ -66,7 +66,7 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ thicknessProfile differencing
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 mkpath(datadir("sims",subFolder,folderName))

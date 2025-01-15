@@ -145,7 +145,7 @@ function updateOperator!(L, u, p, t)
     L .= p.Esparse*p.Part1 .+ p.Part2
 end
 
-function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="Tᵣ")
+function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="T̃ᵣ")
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
@@ -261,12 +261,12 @@ function glycosylationAnyD(dims, K₂, K₄, Tᵣ, α_C, 𝓓, β; thickness="un
         hᵥ = hᵥ,
     )
     fullOperator = MatrixOperator(Esparse*Part1, update_func! = updateOperator!)
-    prob = ODEProblem(fullOperator, u0, (0.0, Tᵣ), p)
+    prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
     println("solving")
     if terminateAt == "halfProduction"
-        sol = solve(prob, solver, progress=true, callback=cb, save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=Tᵣ/(nOutputs-1)
+        sol = solve(prob, solver, progress=true, callback=cb, saveat=T̃ᵣ/(nOutputs-1), save_end=true) #save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=T̃ᵣ/(nOutputs-1)
     else 
-        sol = solve(prob, solver, progress=true, saveat=Tᵣ/(nOutputs-1))#, dt=0.0001) 
+        sol = solve(prob, solver, progress=true, saveat=T̃ᵣ/(nOutputs-1))#, dt=0.0001) 
     end
 
     return sol, p
