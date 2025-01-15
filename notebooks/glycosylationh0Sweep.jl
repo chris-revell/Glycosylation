@@ -35,10 +35,10 @@ hMin = h_C/10
 h₀s = collect(hMin:h_C/2.0:hMax/2.0)
 Ωs    = h₀s.*Ωperp      # Dimensional lumen volume 
 
-C_bConstant = 100.0
-𝓢_bConstant = 100.0
-𝓒s  = C_bConstant.*Ωs
-𝓢s  = 𝓢_bConstant.*Ωs
+𝒞_bConstant = 100.0
+𝒮_bConstant = 100.0
+𝒞s  = 𝒞_bConstant.*Ωs
+𝒮s  = 𝒮_bConstant.*Ωs
 
 #%%
 
@@ -62,15 +62,15 @@ sols = []
 ps = []
 for i=1:length(h₀s)
     @show h₀s[i]
-    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒s[i], 𝓢s[i], 𝓔, D_C, D_S, Tᵣstar; checks=false)
-    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β = derivedParams
-    sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction")
+    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞s[i], 𝒮s[i], ℰ, D_C, D_S, Tᵣstar; checks=false)
+    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β = derivedParams
+    sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction")
     TᵣNumerical = sol.t[end]*(N^2)*(K₂+σ*K₃)
     TᵣStarNumerical = TᵣNumerical/(k₁*E₀)
     push!(sols, sol)
     push!(ps, p)
-    push!(PstarsSim, P_star(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ωs[i], ϕ, Ωperp, k₁, 𝓔, TᵣStarNumerical))
-    push!(PstarsAnalytic, Pstar₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝓢s[i], 𝓒s[i], 𝓔, N, ϕ))
+    push!(PstarsSim, P_star(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ωs[i], ϕ, Ωperp, k₁, ℰ, TᵣStarNumerical))
+    push!(PstarsAnalytic, Pstar₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮s[i], 𝒞s[i], ℰ, N, ϕ))
 end
 
 #%%
@@ -133,7 +133,7 @@ end
 # k₂    = 0.1   # Complex dissociation reverse reaction rate 
 # k₃    = 0.1   # Product formation
 # k₄    = 0.1  # Product dissociation 
-# 𝓒     = 100000.0
+# 𝒞     = 100000.0
 # 𝓢     = 100000.0
 # 𝓔     = 0.0001
 # D_C   = 0.0000001  # Monomer/polymer diffusivity

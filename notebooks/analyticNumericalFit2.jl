@@ -39,9 +39,9 @@ k₁    = 1.0   # Complex formation forward reaction rate
 k₂    = 0.1   # Complex dissociation reverse reaction rate 
 k₃    = 0.1   # Product formation
 k₄    = 0.1  # Product dissociation 
-𝓒     = 100000.0
-𝓢     = 100000.0
-𝓔     = 0.0001
+𝒞     = 100000.0
+𝒮     = 100000.0
+ℰ     = 0.0001
 D_C   = 0.0000001  # Monomer/polymer diffusivity
 D_S   = 0.0000001  # Substrate diffusivity
 Tᵣstar= 1000000000.0  # Release time
@@ -49,7 +49,7 @@ Tᵣstar= 1000000000.0  # Release time
 
 #%%
 
-derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=true)
+derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β = derivedParams
 
 #%%
@@ -138,16 +138,6 @@ end
 #%%
 
 
-# Mϕ50analytic = α_C*𝓒/(2.0*(1+α_C))
-# T50analytic = 2.0*Ωperp/(k₁*𝓔) * N^2* (K₂+σ*K₃) * (t₀ + (ϕ-ν₀)*(1+α_C)*(1+K₂)/(K₂*N*(σ*K₃-K₂*K₄)))
-# P50analytic = Mϕ50analytic/T50analytic
-
-# T50sim = findfirst(x->x>0.5, Ms[])
-# T_r_starSim = T_r_star(sol.t[T50sim], N, 𝓔, Ω, Ωperp, C_b, S_b, k₁, k₂, k₃, k_Ca, k_Cd, k_Sa, k_Sd)
-# P50sim = Ms[][T50sim] / T_r_starSim
-
-# @show P50analytic
-# @show P50sim
 
 #%%
 

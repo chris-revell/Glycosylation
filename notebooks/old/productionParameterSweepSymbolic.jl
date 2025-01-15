@@ -2,13 +2,13 @@ using Symbolics
 using CairoMakie
 using Latexify
 
-@variables α_C α_S k_Ca k_Cd k_Sa k_Sd Ω Ωperp h₀ L₀ k₁ k₂ k₃ k₄ K₂ K₃ K₄ C_b 𝓒 C_0 S_b 𝓢 S_0 σ E_0 𝓔 ϵ β N δ_C D_C δ_S D_S 𝓓 Tᵣ Tᵣstar Δ ϕ 𝓟star
+@variables α_C α_S k_Ca k_Cd k_Sa k_Sd Ω Ωperp h₀ L₀ k₁ k₂ k₃ k₄ K₂ K₃ K₄ C_b 𝒞 C_0 S_b 𝓢 S_0 σ E_0 𝓔 ϵ β N δ_C D_C δ_S D_S 𝓓 Tᵣ Tᵣstar Δ ϕ 𝓟star
 
 lhs(e) = e.lhs
 rhs(e) = e.rhs
 
 expressions = [
-    C_b ~ 𝓒/Ω,
+    C_b ~ 𝒞/Ω,
     S_b ~ 𝓢/Ω,
     Ω ~ Ωperp*h₀,
     α_C ~ (k_Cd*Ω)/(2*k_Ca*Ωperp),
@@ -29,19 +29,19 @@ expressions = [
     𝓓 ~ α_C*δ_C*N^2*(K₂ + σ*K₃),
     Tᵣ ~ (k₁*𝓔*Tᵣstar)/(2*Ωperp),
     β ~ N*(σ*K₃ - K₂*K₄),
-    Δ ~ k₁*𝓒/(2*k₂*Ωperp),
+    Δ ~ k₁*𝒞/(2*k₂*Ωperp),
 ]
 
 expressionsDict = Dict(lhs.(expressions).=>rhs.(expressions))
 
-𝓟star = π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
-# expr = 𝓟star ~ π/(2*ϕ) * (α_C*𝓒)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+𝓟star = π/(2*ϕ) * (α_C*𝒞)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
+# expr = 𝓟star ~ π/(2*ϕ) * (α_C*𝒞)/((1+α_C)^2) * (k₁*𝓔)/(2*Ωperp) * K₂/(1+K₂) * (σ*K₃-K₂*K₄)/(N*(K₂+σ*K₃)) * (1/Tᵣ)
 
 sub1 = substitute(𝓟star, expressionsDict)
 sub2 = substitute(sub1, expressionsDict)
 sub3 = substitute(sub2, expressionsDict)
 
-args = [h₀ Ωperp N k₁ k₂ k₃ k₄ 𝓢 k_Sa k_Sd 𝓒 k_Ca k_Cd ϕ Tᵣstar]
+args = [h₀ Ωperp N k₁ k₂ k₃ k₄ 𝓢 k_Sa k_Sd 𝒞 k_Ca k_Cd ϕ Tᵣstar]
 
 𝓟starFunc = eval(build_function(sub3, args...))
 
@@ -58,7 +58,7 @@ valuesDict = Dict(
     k₃   => 1.1,
     k₄   => 0.6,
     E_0 => 1.0,
-    𝓒 => 100.0,
+    𝒞 => 100.0,
     𝓢 => 100.0,
     D_C  => 1.0,
     D_S  => 1.0,
@@ -77,7 +77,7 @@ k₂   = 0.6   # Complex dissociation reverse reaction rate
 k₃   = 1.1   # Product formation
 k₄   = 0.6  # Product dissociation 
 E_0 = 1.0
-𝓒 = 100.0
+𝒞 = 100.0
 𝓢 = 100.0
 D_C  = 1.0  # Monomer/polymer diffusivity
 D_S  = 1.0  # Substrate diffusivity
@@ -85,7 +85,7 @@ Tᵣstar  = 100.0  # Release time
 ϕ = 0.5
 
 
-𝓟starFunc(1.1, Ωperp, N, k₁, k₂, k₃, k₄, 𝓢, k_Sa, k_Sd, 𝓒, k_Ca, k_Cd, ϕ, Tᵣstar)
+𝓟starFunc(1.1, Ωperp, N, k₁, k₂, k₃, k₄, 𝓢, k_Sa, k_Sd, 𝒞, k_Ca, k_Cd, ϕ, Tᵣstar)
 
 
 # 𝓟starVal = substitute(sub3, valuesDict)
@@ -93,7 +93,7 @@ Tᵣstar  = 100.0  # Release time
 h₀s = collect(0.1:0.1:3.0)
 
 # Ps = zeros(length(h₀s))
-Ps = 𝓟starFunc.(h₀s, Ωperp, N, k₁, k₂, k₃, k₄, 𝓢, k_Sa, k_Sd, 𝓒, k_Ca, k_Cd, ϕ, Tᵣstar)
+Ps = 𝓟starFunc.(h₀s, Ωperp, N, k₁, k₂, k₃, k₄, 𝓢, k_Sa, k_Sd, 𝒞, k_Ca, k_Cd, ϕ, Tᵣstar)
 
 
 for i=1:length(h₀s)
@@ -143,12 +143,12 @@ render(latexify(sub3))
 # expr6 = K₄ ~ k₄/k₁                                            # Non-dimensionalised prodict dissociation rate
 # # expr h₀ ~ Ω/Ωperp                                          # Mean thickness 
 # expr7 = L₀ ~ sqrt(π)*Ω / (Ωperp)^(1.5)                        # Mean radius 
-# # expr C_b~ 𝓒/Ω                     # Initial monomer bulk concentration 
+# # expr C_b~ 𝒞/Ω                     # Initial monomer bulk concentration 
 # # expr S_b~ 𝓢/Ω                     # Initial substrate mass
 # expr8 = C_0 ~ C_b*h₀/(2*(1+α_C))        # Early surface monomer concentration
 # expr9 = S_0 ~ S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
 # # expr E_0~ 𝓔/(2*Ωperp)             # Total enzyme mass
-# expr10 = 𝓒  ~ C_b*Ω                     # Initial monomer mass
+# expr10 = 𝒞  ~ C_b*Ω                     # Initial monomer mass
 # expr11 = σ  ~ (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
 # expr12 = 𝓢  ~ S_b*Ω                     # Initial substrate mass
 # expr13 = 𝓔  ~ 2*E_0*Ωperp               # Total enzyme mass
@@ -160,7 +160,7 @@ render(latexify(sub3))
 # expr19 = 𝓓  ~ α_C*δ_C*N^2*(K₂ + σ*K₃)
 # expr20 = Tᵣ ~ (k₁*𝓔*Tᵣstar)/(2*Ωperp)
 # expr21 = β ~ N*(σ*K₃ - K₂*K₄)
-# expr22 = Δ  ~ k₁*𝓒/(2*k₂*Ωperp)
+# expr22 = Δ  ~ k₁*𝒞/(2*k₂*Ωperp)
 
 # Ω ~ Ωperp*h₀
 # α_C ~ (k_Cd*Ω)/(2*k_Ca*Ωperp)                          # Balance of complex in bulk to complex on membrane
@@ -170,12 +170,12 @@ render(latexify(sub3))
 # K₄ ~ k₄/k₁                                            # Non-dimensionalised prodict dissociation rate
 # # expr h₀ ~ Ω/Ωperp                                          # Mean thickness 
 # L₀ ~ sqrt(π)*Ω / (Ωperp)^(1.5)                        # Mean radius 
-# # expr C_b~ 𝓒/Ω                     # Initial monomer bulk concentration 
+# # expr C_b~ 𝒞/Ω                     # Initial monomer bulk concentration 
 # # expr S_b~ 𝓢/Ω                     # Initial substrate mass
 # C_0 ~ C_b*h₀/(2*(1+α_C))        # Early surface monomer concentration
 # S_0 ~ S_b*h₀/(2*(1+α_S))      # Early surface substrate concentration 
 # # expr E_0~ 𝓔/(2*Ωperp)             # Total enzyme mass
-# 𝓒  ~ C_b*Ω                     # Initial monomer mass
+# 𝒞  ~ C_b*Ω                     # Initial monomer mass
 # σ  ~ (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
 # 𝓢  ~ S_b*Ω                     # Initial substrate mass
 # 𝓔  ~ 2*E_0*Ωperp               # Total enzyme mass
@@ -187,13 +187,13 @@ render(latexify(sub3))
 # 𝓓  ~ α_C*δ_C*N^2*(K₂ + σ*K₃)
 # Tᵣ ~ (k₁*𝓔*Tᵣstar)/(2*Ωperp)
 # β ~ N*(σ*K₃ - K₂*K₄)
-# Δ  ~ k₁*𝓒/(2*k₂*Ωperp)
+# Δ  ~ k₁*𝒞/(2*k₂*Ωperp)
 
 
-# @variables α_C α_S k_Ca k_Cd k_Sa k_Sd Ω Ωperp h₀ L₀ k₁ k₂ k₃ k₄ K₂ K₃ K₄ C_b 𝓒 C_0 S_b 𝓢 S_0 σ E_0 𝓔 ϵ β N δ_C D_C δ_S D_S 𝓓 Tᵣ Tᵣstar Δ ϕ 𝓟star
+# @variables α_C α_S k_Ca k_Cd k_Sa k_Sd Ω Ωperp h₀ L₀ k₁ k₂ k₃ k₄ K₂ K₃ K₄ C_b 𝒞 C_0 S_b 𝓢 S_0 σ E_0 𝓔 ϵ β N δ_C D_C δ_S D_S 𝓓 Tᵣ Tᵣstar Δ ϕ 𝓟star
 
 # Ω = Ωperp*h₀
-# C_b = 𝓒/Ω
+# C_b = 𝒞/Ω
 # S_b = 𝓢/Ω 
 # α_C = (k_Cd*Ω)/(2*k_Ca*Ωperp)                          
 # α_S = (k_Sd*Ω)/(2*k_Sa*Ωperp)                          
@@ -202,12 +202,12 @@ render(latexify(sub3))
 # K₄ = k₄/k₁                                            
 # # expr h₀= Ω/Ωperp                                    
 # L₀ = sqrt(π)*Ω / (Ωperp)^(1.5)                        
-# # expr C_b~ 𝓒/Ω                     
+# # expr C_b~ 𝒞/Ω                     
 # # expr S_b~ 𝓢/Ω                     
 # C_0 = C_b*h₀/(2*(1+α_C))        
 # S_0 = S_b*h₀/(2*(1+α_S))      
 # # expr E_0~ 𝓔/(2*Ωperp)             
-# # 𝓒 = C_b*Ω                    
+# # 𝒞 = C_b*Ω                    
 # σ = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
 # # 𝓢 = S_b*Ω                     
 # 𝓔 = 2*E_0*Ωperp               
@@ -219,7 +219,7 @@ render(latexify(sub3))
 # 𝓓 = α_C*δ_C*N^2*(K₂ + σ*K₃)
 # Tᵣ = (k₁*𝓔*Tᵣstar)/(2*Ωperp)
 # β = N*(σ*K₃ - K₂*K₄)
-# Δ = k₁*𝓒/(2*k₂*Ωperp)
+# Δ = k₁*𝒞/(2*k₂*Ωperp)
 
 
 # 𝓟starSimpl = simplify(sub1)
@@ -229,7 +229,7 @@ render(latexify(sub3))
 #     K₃ ~ k₃/k₁,
 #     K₄ ~ k₄/k₁,
 #     𝓔 ~ 2*E_0*Ωperp,
-#     Δ ~ k₁*𝓒/(2*k₂*Ωperp),
+#     Δ ~ k₁*𝒞/(2*k₂*Ωperp),
 #     Ω ~ Ωperp*h₀,
 # ]
 
@@ -240,7 +240,7 @@ render(latexify(sub3))
 #     δ_C ~ π*D_C/(k₁*𝓔),
 #     δ_S ~ π*D_S/(k₁*𝓔),
 #     Tᵣ ~ (k₁*𝓔*Tᵣstar)/(2*Ωperp),
-#     C_b ~ 𝓒/Ω,
+#     C_b ~ 𝒞/Ω,
 #     S_b ~ 𝓢/Ω,
 # ]
 
@@ -255,8 +255,8 @@ render(latexify(sub3))
 # ]
 # @variables k_Ca k_Cd k_Sa k_Sd Ωperp h₀ k₁ k₂ k₃ k₄ C_b S_b E_0 N D_C D_S Tᵣstar ϕ
 # @variables Ω(Ωperp,h₀) α_C(k_Cd,Ω,k_Ca,Ωperp) α_S(Ω,k_Sa,Ωperp) L₀(Ω,Ωperp) 
-# @variables K₂(k₁,k₂,C_b,k_Ca,Ωperp,k_Cd,Ω) K₃(k₁,k₃) K₄(k₁,k₄) 𝓒(C_b,Ω) C_0(C_b,h₀,α_C) 𝓢(S_b,Ω) S_0(S_b,h₀,α_S) 
+# @variables K₂(k₁,k₂,C_b,k_Ca,Ωperp,k_Cd,Ω) K₃(k₁,k₃) K₄(k₁,k₄) 𝒞(C_b,Ω) C_0(C_b,h₀,α_C) 𝓢(S_b,Ω) S_0(S_b,h₀,α_S) 
 # @variables σ(S_b,k_Cd,k_Ca,C_b,k_Sa,k_Sd,Ωperp,Ω) 𝓔(E_0,Ωperp) 
 # @variables ϵ(𝓔,k_Cd,k_Ca,C_b,Ω,Ωperp) β(N,σ,K₃,K₂,K₄) 
-# @variables δ_C(D_C,k₁,𝓔) δ_S(D_S,k₁,𝓔) 𝓓(α_C,δ_C,N,K₂,σ,K₃) Tᵣ(k₁,𝓔,Tᵣstar,Ωperp) Δ(k₁,𝓒,k₂,Ωperp) 
-# @variables 𝓟star(ϕ,𝓒,α_C,k₁,𝓔,Ωperp,K₂,K₄,N,K₂,σ,K₃,Tᵣ)
+# @variables δ_C(D_C,k₁,𝓔) δ_S(D_S,k₁,𝓔) 𝓓(α_C,δ_C,N,K₂,σ,K₃) Tᵣ(k₁,𝓔,Tᵣstar,Ωperp) Δ(k₁,𝒞,k₂,Ωperp) 
+# @variables 𝓟star(ϕ,𝒞,α_C,k₁,𝓔,Ωperp,K₂,K₄,N,K₂,σ,K₃,Tᵣ)

@@ -1,37 +1,37 @@
 
 module DerivedParameters
 
-function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=true)
+function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
 
     L₀   = sqrt(Ωperp/π)       # Dimensional mean cyclindrical radius of cisterna 
     # 𝓔    = 2*Ωperp*E₀        # Dimensional total enzyme mass
-    E₀  = 𝓔/2*Ωperp           # Dimensional mean enzyme concentration
+    E₀  = ℰ/2*Ωperp           # Dimensional mean enzyme concentration
     # Ω    = h₀*Ωperp           # Dimensional lumen volume
     h₀   = Ω/Ωperp             # Dimensional mean lumen thickness
-    C_b  = 𝓒/Ω                 # Dimensional initial bulk monomeric cargo concentration
-    S_b  = 𝓢/Ω                 # Dimensional initial bulk substrate concentration
+    C_b  = 𝒞/Ω                 # Dimensional initial bulk monomeric cargo concentration
+    S_b  = 𝒮/Ω                 # Dimensional initial bulk substrate concentration
     
-    δ_C  = π*D_C/(k₁*𝓔)  # Dimensionless diffusivity
-    δ_S  = π*D_S/(k₁*𝓔)  # Dimensionless diffusivity
+    δ_C  = π*D_C/(k₁*ℰ)  # Dimensionless diffusivity
+    δ_S  = π*D_S/(k₁*ℰ)  # Dimensionless diffusivity
 
     α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Dimensionless complex capacitance
     α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Dimensionless substrate capacitance    
 
-    C₀   = 𝓒/(2*Ωperp*(1+α_C))  # Dimensional Early surface monomer concentration
+    C₀   = 𝒞/(2*Ωperp*(1+α_C))  # Dimensional Early surface monomer concentration
     S₀   = 𝓢/(2*Ωperp*(1+α_S))  # Dimensional Early surface substrate concentration 
     
-    Tᵣ   = k₁*𝓔*Tᵣstar/(2*Ωperp)   # Dimensionless release time 
+    Tᵣ   = k₁*ℰ*Tᵣstar/(2*Ωperp)   # Dimensionless release time 
     
     K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
     K₃   = k₃/k₁                                            # Dimensionless product formation rate
     K₄   = k₄/k₁                                            # Dimensionless prodict dissociation rate
     # σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
     σ    = S₀/C₀                                            # Dimensionless substrate/cargo concentration on surface
-    # σ    = 𝓢*(1+α_C)/(𝓒*(1+α_S))
+    # σ    = 𝓢*(1+α_C)/(𝒞*(1+α_S))
     # ϵ    = 𝓔*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
     ϵ    = E₀/C₀                                            # Dimensionless enzyme/cargo concentration on surface 
-    # ϵ    = 𝓔*(1+α_C)/𝓒
-    𝓓    = α_C*δ_C*N^2*(K₂ + σ*K₃)    # Dimensionless parameter on diffusion term, derived from combination of other terms
+    # ϵ    = 𝓔*(1+α_C)/𝒞
+    𝒟    = α_C*δ_C*N^2*(K₂ + σ*K₃)    # Dimensionless parameter on diffusion term, derived from combination of other terms
     β    = N*(σ*K₃ - K₂*K₄)           # Dimensionless parameter on advection term, derived from combination of other terms 
 
     T̃ᵣ   = Tᵣ/((N^2)*(K₂+σ*K₃))
@@ -39,9 +39,9 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
     # λ = (𝓢/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
 
     if checks 
-        println("Small aspect ratio: Ω² << Ω⟂³min(1, D_C/k₁𝓔, D_S/k₁𝓔)")
-        println("Ω² = $(Ω^2), Ω⟂³min(1, D_C/k₁𝓔, D_S/k₁𝓔) = $(Ωperp^3*minimum([1.0,D_C/k₁*𝓔,D_S/k₁*𝓔]))")
-        printstyled("$(Ω^2 < Ωperp^3*minimum([1.0,D_C/k₁*𝓔,D_S/k₁*𝓔]))"; color = (Ω^2 < Ωperp^3*minimum([1.0,D_C/k₁*𝓔,D_S/k₁*𝓔]) ? :green : :red))
+        println("Small aspect ratio: Ω² << Ω⟂³min(1, D_C/k₁𝓔, D_S/k₁ℰ)")
+        println("Ω² = $(Ω^2), Ω⟂³min(1, D_C/k₁𝓔, D_S/k₁ℰ) = $(Ωperp^3*minimum([1.0,D_C/k₁*ℰ,D_S/k₁*ℰ]))")
+        printstyled("$(Ω^2 < Ωperp^3*minimum([1.0,D_C/k₁*ℰ,D_S/k₁*ℰ]))"; color = (Ω^2 < Ωperp^3*minimum([1.0,D_C/k₁*ℰ,D_S/k₁*ℰ]) ? :green : :red))
         println("")
 
         println("Strong exchange kinetics: D_C*Ωperp << k_Ca*Ω, D_S*Ωperp << k_Sa*Ω") 
@@ -105,7 +105,7 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
 
     end
 
-    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝓓"=>𝓓, "β"=>β) #, "λ"=>λ)
+    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝒟"=>𝒟, "β"=>β) #, "λ"=>λ)
 end 
 
 export derivedParameters

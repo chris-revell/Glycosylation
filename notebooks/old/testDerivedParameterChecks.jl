@@ -16,11 +16,11 @@ k₂    = 0.1   # Complex dissociation reverse reaction rate
 k₃    = 1.0   # Product formation
 k₄    = 1.0  # Product dissociation 
 E_0   = 0.001
-𝓒     = 100.0
-𝓢     = 1000.0
+𝒞     = 100.0
+𝒮     = 1000.0
 D_C   = 0.01  # Monomer/polymer diffusivity
 D_S   = 0.01  # Substrate diffusivity
 Tᵣstar= 5000.0  # Release time
 ϕ     = 0.5
 
-params = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝓒, 𝓢, D_C, D_S, Tᵣstar; checks=true)
+params = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝒞, 𝓢, D_C, D_S, Tᵣstar; checks=true)

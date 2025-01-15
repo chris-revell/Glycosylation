@@ -29,7 +29,6 @@ thicknessProfile = "Gaussian"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
-
 σGaussian = 0.20
 
 nSpatialDims = 1
@@ -50,9 +49,9 @@ k₁    = 1.0   # Complex formation forward reaction rate
 k₂    = 0.1   # Complex dissociation reverse reaction rate 
 k₃    = 0.1   # Product formation
 k₄    = 0.1  # Product dissociation 
-𝓒     = 100000.0
-𝓢     = 100000.0
-𝓔     = 0.0001
+𝒞     = 100000.0
+𝒮     = 100000.0
+ℰ     = 0.0001
 D_C   = 0.0000001  # Monomer/polymer diffusivity
 D_S   = 0.0000001  # Substrate diffusivity
 Tᵣstar= 1000000000.0  # Release time
@@ -79,9 +78,9 @@ rawParams = (
     k₂ = k₂,
     k₃ = k₃,
     k₄ = k₄,
-    𝓒 = 𝓒,
-    𝓢 = 𝓢,
-    𝓔 = 𝓔,
+    𝒞 = 𝒞,
+    𝒮 = 𝒮,
+    ℰ = ℰ,
     D_C = D_C,
     D_S = D_S,
     Tᵣstar = Tᵣstar,
@@ -101,13 +100,13 @@ rawParams = (
 
 #%%
 
-derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝓒, 𝓢, 𝓔, D_C, D_S, Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β = derivedParams
+derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β = derivedParams
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ differencing
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝒟 T̃ᵣ differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
 subFolder = "VaryingHandF"
@@ -115,7 +114,7 @@ mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-sol1, p1 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
+sol1, p1 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
 println("finished sim")
 
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(dims)], dims...)
@@ -126,7 +125,7 @@ jldsave(datadir("sims",subFolder,folderName,"solutionHVariation.jld2"); sol1, p1
 
 #%%
 
-sol2, p2 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
+sol2, p2 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
 println("finished sim 2")
 
 mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(dims)], dims...)

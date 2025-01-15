@@ -1,7 +1,3 @@
-# nSpatialDims = 1
-# Ngrid = 401
-# dims  = fill(Ngrid, nSpatialDims+1)
-
 h₀ = 0.1
 Ωperp = 10000    # Dimensional lumen footprint area
 Ω     = h₀*Ωperp      # Dimensional lumen volume 
@@ -14,10 +10,10 @@ k₁    = 1.0   # Complex formation forward reaction rate
 k₂    = 0.1   # Complex dissociation reverse reaction rate 
 k₃    = 0.1   # Product formation
 k₄    = 0.1  # Product dissociation 
-𝓒     = 100000.0
-𝓢     = 100000.0
-𝓔     = 0.0001
+𝒞     = 100000.0
+𝒮     = 100000.0
+ℰ     = 0.0001
 D_C   = 0.0000001  # Monomer/polymer diffusivity
 D_S   = 0.0000001  # Substrate diffusivity
-Tᵣstar= 1000000000.0  # Release time
+Tᵣstar= 10000000000000.0  # Release time
 ϕ     = 0.5
