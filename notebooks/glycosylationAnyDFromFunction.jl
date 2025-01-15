@@ -24,19 +24,21 @@ using JLD2
 
 #%%
 
-thicknessProfile = "GRF"
+subFolder = ""
+
+thicknessProfile = "uniform"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
 σGRF = 0.2
 
-nSpatialDims = 2
-Ngrid = 201
+nSpatialDims = 1
+Ngrid = 401
 dims = fill(Ngrid, nSpatialDims+1)
 
 #%%
 
-h₀ = 0.1
+h₀ = 0.002
 Ωperp = 10000    # Dimensional lumen footprint area
 Ω     = h₀*Ωperp      # Dimensional lumen volume 
 N     = 100     # Maximum polymer length 
@@ -53,7 +55,7 @@ k₄    = 0.1  # Product dissociation
 𝓔     = 0.0001
 D_C   = 0.0000001  # Monomer/polymer diffusivity
 D_S   = 0.0000001  # Substrate diffusivity
-Tᵣstar= 0.75*1000000000.0  # Release time
+Tᵣstar= 10000000000000.0  # Release time
 ϕ     = 0.5
 
 #%%
@@ -67,7 +69,6 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 Tᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
-subFolder = "1DGRFExamples"
 mkpath(datadir("sims",subFolder,folderName))
 
 #%%
