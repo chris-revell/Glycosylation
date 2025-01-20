@@ -15,9 +15,9 @@
 # ċ = aE∇⋅flux_νₑ + a∇⋅flux_xyₑ
 # ċ = a*E*∇⋅(K₂*K₄.*Pν*∇ₑ*cᵥ - β*Pν*Aᵤₚ*cᵥ) + a∇⋅(Dₑ*hₑ*Pxy*∇ₑ*cᵥ)
 # Dₑ constant over edges 
-# ċ = a*(E*∇⋅(K₂*K₄.*Pν*∇ₑ - β*Pν*Aᵤₚ) + 𝓓.*∇⋅(hₑ*Pxy*∇ₑ))*cᵥ
+# ċ = a*(E*∇⋅(K₂*K₄.*Pν*∇ₑ - β*Pν*Aᵤₚ) + 𝒟.*∇⋅(hₑ*Pxy*∇ₑ))*cᵥ
 
-# L = -W⁻¹*Aᵀ*𝓓*L⁻¹*A .+ W⁻¹*Aᵀ*V*Aᵤₚ # Express model as a matrix operator 
+# L = -W⁻¹*Aᵀ*𝒟*L⁻¹*A .+ W⁻¹*Aᵀ*V*Aᵤₚ # Express model as a matrix operator 
 
 
 # Cνν = W⁻¹*Aᵀ*Pν*L⁻¹*A
@@ -31,7 +31,7 @@
 # ċ = aE∇⋅flux_νₑ + a∇⋅flux_xyₑ
 # ċ = a*E*∇⋅(K₂*K₄.*Pν*∇ₑ*cᵥ - β*Pν*Aᵤₚ*cᵥ) + a∇⋅(Dₑ*hₑ*Pxy*∇ₑ*cᵥ)
 # Dₑ constant over edges 
-# ċ = a*(E*∇⋅(K₂*K₄.*Pν*∇ₑ - β*Pν*Aᵤₚ) + 𝓓.*∇⋅(hₑ*Pxy*∇ₑ))*cᵥ
+# ċ = a*(E*∇⋅(K₂*K₄.*Pν*∇ₑ - β*Pν*Aᵤₚ) + 𝒟.*∇⋅(hₑ*Pxy*∇ₑ))*cᵥ
 
 
 
@@ -107,21 +107,26 @@ function hFunGaussian(dims; σ=0.5, μ=0.5)
     end
 end
 
-
-function conditionSteadyState(u, t, integrator)
+function conditionSteadyStateHalfProduction(u, t, integrator)
     uInternal = reshape(integrator.p.W*integrator.p.hᵥ*u, integrator.p.dims...)
     M̃ = sum(uInternal, dims=(2:length(integrator.p.dims)))
     Mϕ = sum(M̃[ceil(Int, 0.5*integrator.p.dims[1]) : integrator.p.dims[1]])
     Mϕ/sum(M̃) > 0.5 ? true : false
 end
 
+function conditionSteadyStateNuWall(u, t, integrator)
+    uInternal = reshape(u, integrator.p.dims...)
+    findmax(uInternal)[2].I[1] > 0.8*integrator.p.dims[1] ? true : false
+end
+
 function affectTerminate!(integrator)
-    # if conditionSteadyState() returns true, terminate integrator and pass successful return code
-    println("Terminate at half production")
+    # if condition function returns true, terminate integrator and pass successful return code
+    println("Terminate")
     terminate!(integrator, ReturnCode.Success)    
 end
 
-cb = DiscreteCallback(conditionSteadyState, affectTerminate!)
+cbHalfProduction = DiscreteCallback(conditionSteadyStateHalfProduction, affectTerminate!)
+cbNuWall = DiscreteCallback(conditionSteadyStateNuWall, affectTerminate!)
 
 # Integrate over ν to find E field in spatial dimensions.
 # When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
@@ -145,7 +150,7 @@ function updateOperator!(L, u, p, t)
     L .= p.Esparse*p.Part1 .+ p.Part2
 end
 
-function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="T̃ᵣ")
+function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="T̃ᵣ")
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
@@ -191,7 +196,7 @@ function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β; thickness="
     # Diffusivity field over edges 
     # Set no-flux boundary conditions by enforcing zero diffusivity in edges connection ghost points
     Aperpₑ = edgePerpendicularAreaMatrix(dims, spacing)
-    𝓓ₑ     = 𝓓.*Aperpₑ # Sparse diagonal matrix of diffusivities over edges 
+    𝒟ₑ     = 𝒟.*Aperpₑ # Sparse diagonal matrix of diffusivities over edges 
 
     # Diagonal matrices of compartment thickness h over all vertices hᵥ
     # Also diagonal matrix of thickness over edges, formed by taking mean of h at adjacent vertices 0.5.*Ā*hᵥ
@@ -246,7 +251,7 @@ function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β; thickness="
     else
         Part1 = aᵥ*∇cdot*Aperpₑ*(K₂*K₄.*Pν*∇ₑ - β.*Pν*Ā./2.0)
     end
-    Part2 = aᵥ*∇cdot*Aperpₑ*(hₑ*Pxy*𝓓ₑ*∇ₑ)
+    Part2 = aᵥ*∇cdot*Aperpₑ*(hₑ*Pxy*𝒟ₑ*∇ₑ)
 
     p = (Part1 = Part1, 
         Part2 = Part2, 
@@ -261,12 +266,17 @@ function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β; thickness="
         hᵥ = hᵥ,
     )
     fullOperator = MatrixOperator(Esparse*Part1, update_func! = updateOperator!)
-    prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
     println("solving")
     if terminateAt == "halfProduction"
-        sol = solve(prob, solver, progress=true, callback=cb, saveat=T̃ᵣ/(nOutputs-1), save_end=true) #save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=T̃ᵣ/(nOutputs-1)
+        prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
+        # sol = solve(prob, solver, progress=true, callback=cbHalfProduction, save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=T̃ᵣ/(nOutputs-1)
+        sol = solve(prob, solver, progress=true, callback=cbHalfProduction, saveat=T̃ᵣ/(nOutputs-1), save_end=true) #save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=T̃ᵣ/(nOutputs-1)
+    elseif terminateAt == "nuWall"
+        prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
+        sol = solve(prob, solver, progress=true, callback=cbNuWall, saveat=T̃ᵣ/(nOutputs-1), save_end=true) #save_on=false, save_start=false, save_end=true)#, dt=0.0001) , saveat=T̃ᵣ/(nOutputs-1)
     else 
-        sol = solve(prob, solver, progress=true, saveat=T̃ᵣ/(nOutputs-1))#, dt=0.0001) 
+        prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
+        sol = solve(prob, solver, progress=true, saveat=T̃ᵣ/(nOutputs-1))
     end
 
     return sol, p
