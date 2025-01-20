@@ -25,40 +25,25 @@ using LinearAlgebra
 
 #%%
 
-thicknessProfile = "Gaussian"
+subFolder = "VaryingHandF"
+terminateAt = "nuWall"
+# thicknessProfile = "Gaussian"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
+# σGRF = 0.2
 σGaussian = 0.20
 
 nSpatialDims = 1
 Ngrid = 401
 dims = fill(Ngrid, nSpatialDims+1)
 
+include(projectdir("notebooks", "paramsRaw.jl"))
+
 #%%
 
-h₀ = 0.1
-Ωperp = 10000    # Dimensional lumen footprint area
-Ω     = h₀*Ωperp      # Dimensional lumen volume 
-N     = 100     # Maximum polymer length 
-k_Cd  = 1.0 # Complex desorption rate
-k_Ca  = 0.01 # Complex adsorption rate
-k_Sd  = 1.0 # Substrate desorption rate
-k_Sa  = 0.01 # Substrate adsorption rate
-k₁    = 1.0   # Complex formation forward reaction rate 
-k₂    = 0.1   # Complex dissociation reverse reaction rate 
-k₃    = 0.1   # Product formation
-k₄    = 0.1  # Product dissociation 
-𝒞     = 100000.0
-𝒮     = 100000.0
-ℰ     = 0.0001
-D_C   = 0.0000001  # Monomer/polymer diffusivity
-D_S   = 0.0000001  # Substrate diffusivity
-Tᵣstar= 1000000000.0  # Release time
-ϕ     = 0.5
-
-rawParams = (
-    thicknessProfile = thicknessProfile,
+rawParams1 = (
+    thicknessProfile = "Gaussian",
     differencing = differencing,
     solver = solver,
     nOutputs = nOutputs,
@@ -87,21 +72,10 @@ rawParams = (
     ϕ = ϕ
 )
 
-# xMax = π^(1/nSpatialDims)
-# xs   = collect(range(0.0, xMax, dims[2]))
-# # dx   = xs[2]-xs[1]
-# if nSpatialDims > 1 
-#     yMax = xMax
-#     ys   = collect(range(0.0, yMax, dims[3]))
-#     # dy   = ys[2]-ys[1]
-# end
-# νMax = 1.0
-# νs   = collect(range(0.0, νMax, dims[1]))
-
 #%%
 
 derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β = derivedParams
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S = derivedParams
 
 #%%
 
@@ -109,35 +83,66 @@ derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k
 paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝒟 T̃ᵣ differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
-subFolder = "VaryingHandF"
 mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-sol1, p1 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
+sol1, p1 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian, terminateAt=terminateAt)
 println("finished sim")
 
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(dims)], dims...)
 
 #%%
 
-jldsave(datadir("sims",subFolder,folderName,"solutionHVariation.jld2"); sol1, p1, rawParams)
+jldsave(datadir("sims",subFolder,folderName,"solutionHVariation.jld2"); sol1, p1, rawParams1)
 
 #%%
 
-sol2, p2 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian)
+sol2, p2 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", fDist="Gaussian", differencing=differencing, solver=solver, nOutputs=nOutputs, σGaussian=σGaussian, terminateAt=terminateAt)
 println("finished sim 2")
 
 mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(dims)], dims...)
 
 #%%
 
-jldsave(datadir("sims",subFolder,folderName,"solutionFVariation.jld2"); sol2, p2, rawParams)
+rawParams2 = (
+    thicknessProfile = "uniform",
+    differencing = differencing,
+    solver = solver,
+    nOutputs = nOutputs,
+    # σGRF = σGRF,
+    nSpatialDims = nSpatialDims,
+    Ngrid = Ngrid,
+    dims = dims,
+    h₀ = h₀,
+    Ωperp = Ωperp,
+    Ω = Ω,
+    N = N,
+    k_Cd = k_Cd,
+    k_Ca = k_Ca,
+    k_Sd = k_Sd,
+    k_Sa = k_Sa,
+    k₁ = k₁,
+    k₂ = k₂,
+    k₃ = k₃,
+    k₄ = k₄,
+    𝒞 = 𝒞,
+    𝒮 = 𝒮,
+    ℰ = ℰ,
+    D_C = D_C,
+    D_S = D_S,
+    Tᵣstar = Tᵣstar,
+    ϕ = ϕ
+)
+
+jldsave(datadir("sims",subFolder,folderName,"solutionFVariation.jld2"); sol2, p2, rawParams2)
 
 #%%
 
 # frames = collect(4:48:100)
-frames = collect(1:40:100)
+outLength = min(length(sol1.t), length(sol2.t))
+frames = collect(1:outLength÷2-1:outLength)
+# frames = collect(1:40:100)
 fig = Figure(size=(1000,1000))
 
 νs = collect(range(0.0, 1.0, dims[1]))
@@ -289,3 +294,25 @@ for x=2:4
     # linkyaxes!(axesVec[3], axesVec[end])
     save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
 end
+
+
+
+# h₀ = 0.1
+# Ωperp = 10000    # Dimensional lumen footprint area
+# Ω     = h₀*Ωperp      # Dimensional lumen volume 
+# N     = 100     # Maximum polymer length 
+# k_Cd  = 1.0 # Complex desorption rate
+# k_Ca  = 0.01 # Complex adsorption rate
+# k_Sd  = 1.0 # Substrate desorption rate
+# k_Sa  = 0.01 # Substrate adsorption rate
+# k₁    = 1.0   # Complex formation forward reaction rate 
+# k₂    = 0.1   # Complex dissociation reverse reaction rate 
+# k₃    = 0.1   # Product formation
+# k₄    = 0.1  # Product dissociation 
+# 𝒞     = 100000.0
+# 𝒮     = 100000.0
+# ℰ     = 0.0001
+# D_C   = 0.0000001  # Monomer/polymer diffusivity
+# D_S   = 0.0000001  # Substrate diffusivity
+# Tᵣstar= 1000000000.0  # Release time
+# ϕ     = 0.5

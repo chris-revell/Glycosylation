@@ -25,20 +25,27 @@ nOutputs = 100
 include(projectdir("notebooks", "paramsRaw.jl"))
 
 nSpatialDims = 1
-Ngrid = 601
+Ngrid = 401
 dims = fill(Ngrid, nSpatialDims+1)
 
 h_C = 2*k_Ca/k_Cd
 h_S = 2*k_Sa/k_Sd
 hMax = h_C*10
 hMin = h_C/10
-h₀s = collect(hMin:h_C/2.0:hMax/2.0)
+h₀s = collect(hMin:5*hMin:hMax)
 Ωs    = h₀s.*Ωperp      # Dimensional lumen volume 
 
-𝒞_bConstant = 100.0
-𝒮_bConstant = 100.0
-𝒞s  = 𝒞_bConstant.*Ωs
-𝒮s  = 𝒮_bConstant.*Ωs
+
+λ = h_C/h_S
+ζ = (2*k₂*Ωperp)/(k₃*𝒮)
+γ = (2*k₂*Ωperp)/(k₁*𝒞)
+Δ = 2*k₂*k₄*Ωperp/(k₁*k₃*𝒮)
+F = (u*(1-Δ*(1+λ*u)))/((1+u)*(1+ζ*(1+λ*u)*(1+u+(1/γ))))
+hMax = sqrt((γ+ζ)/(ζ*λ))
+# 𝒞_bConstant = 𝒞/Ω
+# 𝒮_bConstant = 𝒮/Ω
+# 𝒞s  = 𝒞_bConstant.*Ωs
+# 𝒮s  = 𝒮_bConstant.*Ωs
 
 #%%
 
@@ -58,19 +65,25 @@ nSpatialDims == 1 ? spacing  = [dν, dx] : spacing  = [dν, dx, dy]
 PstarsAnalytic = []
 PstarsSim = []
 MstarsPhiSim = []
+Tᵣ₅₀Stars = []
 sols = []
 ps = []
 for i=1:length(h₀s)
     @show h₀s[i]
-    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞s[i], 𝒮s[i], ℰ, D_C, D_S, Tᵣstar; checks=false)
-    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β = derivedParams
+    # derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞s[i], 𝒮s[i], ℰ, D_C, D_S, Tᵣstar; checks=false)
+    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
+    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S = derivedParams
     sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction")
-    TᵣNumerical = sol.t[end]*(N^2)*(K₂+σ*K₃)
-    TᵣStarNumerical = TᵣNumerical/(k₁*E₀)
+    T̃ᵣ₅₀ = sol.t[end]
+    Tᵣ₅₀ = T̃ᵣ₅₀*(N^2)*(K₂+σ*K₃)
+    Tᵣ₅₀Star = Tᵣ₅₀/(k₁*E₀)
+    push!(Tᵣ₅₀Stars, Tᵣ₅₀Star)
     push!(sols, sol)
     push!(ps, p)
-    push!(PstarsSim, P_star(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ωs[i], ϕ, Ωperp, k₁, ℰ, TᵣStarNumerical))
-    push!(PstarsAnalytic, Pstar₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮s[i], 𝒞s[i], ℰ, N, ϕ))
+    push!(MstarsPhiSim, M_star_ϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, 𝒞, Ωs[i], ϕ))
+    push!(PstarsSim, P_star(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ωs[i], ϕ, Ωperp, k₁, ℰ, Tᵣ₅₀Star))
+    @show PstarsSim[end]
+    push!(PstarsAnalytic, Pstar₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ))
 end
 
 #%%
@@ -91,7 +104,7 @@ ax2 = Axis(fig[2,1])
 ax2.xlabel = "h₀"
 ax2.ylabel = L"𝓟^*_{50}"
 ylims!(ax2, (0.0,maximum(PstarsAnalytic)))
-xlims!(ax2, (0.0,maximum(h₀s)))
+xlims!(ax2, (0.0, max(maximum(h₀s), max(h_C, h_S))))
 push!(linesVec, lines!(ax2, h₀s, PstarsAnalytic, color=:red))
 push!(labelsVec, "Analytic")
 
@@ -107,7 +120,9 @@ push!(labelsVec, L"h_S")
 
 Legend(fig[:,2], linesVec, labelsVec)
 
-# display(fig)
+linkxaxes!(ax1, ax2)
+
+display(fig)
 
 subFolder = "h0sweep"
 mkpath(datadir("sims", subFolder))

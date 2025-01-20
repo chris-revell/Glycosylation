@@ -16,54 +16,39 @@ using InvertedIndices
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 
-
 #%%
+
+subFolder = "analyticNumericFit2"
+terminateAt = "nuWall"
 thicknessProfile = "uniform"
 differencing = "centre"
+solver = SSPRK432()
+nOutputs = 500
+σGRF = 0.2
+
 nSpatialDims = 1
 Ngrid = 401
-# dims = [Ngrid,2]
 dims = fill(Ngrid, nSpatialDims+1)
 
-#%%
+include(projectdir("notebooks", "paramsRaw.jl"))
 
-h₀ = 0.1
-Ωperp = 10000    # Dimensional lumen footprint area
-Ω     = h₀*Ωperp      # Dimensional lumen volume 
-N     = 100     # Maximum polymer length 
-k_Cd  = 1.0 # Complex desorption rate
-k_Ca  = 0.01 # Complex adsorption rate
-k_Sd  = 1.0 # Substrate desorption rate
-k_Sa  = 0.01 # Substrate adsorption rate
-k₁    = 1.0   # Complex formation forward reaction rate 
-k₂    = 0.1   # Complex dissociation reverse reaction rate 
-k₃    = 0.1   # Product formation
-k₄    = 0.1  # Product dissociation 
-𝒞     = 100000.0
-𝒮     = 100000.0
-ℰ     = 0.0001
-D_C   = 0.0000001  # Monomer/polymer diffusivity
-D_S   = 0.0000001  # Substrate diffusivity
-Tᵣstar= 1000000000.0  # Release time
-ϕ     = 0.5
 
 #%%
 
 derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝓓, β = derivedParams
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S = derivedParams
 
 #%%
 
-sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness=thicknessProfile, differencing=differencing, solver=SSPRK432(), nOutputs=500)
+sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt=terminateAt)
 println("finished sim")
 
 #%%
 
 # Create directory for run data labelled with current time.
-paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ thicknessProfile differencing
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝒟 T̃ᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
 # Create frames subdirectory to store system state at each output time
-subFolder = "analyticNumericFit"
 mkpath(datadir("sims",subFolder,folderName))
 
 #%%
@@ -187,7 +172,7 @@ display(fig)
 @show T̃ᵣ
 @show K₂
 @show K₄
-@show 𝓓
+@show 𝒟
 @show ϕ
 
 
@@ -195,5 +180,35 @@ display(fig)
 # K₂ = 1.0
 # K₄ = 0.0001
 # α_C = 1.0
-# 𝓓 = 1.0
+# 𝒟 = 1.0
 # β = 0.1
+
+# #%%
+# thicknessProfile = "uniform"
+# differencing = "centre"
+# nSpatialDims = 1
+# Ngrid = 401
+# # dims = [Ngrid,2]
+# dims = fill(Ngrid, nSpatialDims+1)
+
+# #%%
+
+# h₀ = 0.1
+# Ωperp = 10000    # Dimensional lumen footprint area
+# Ω     = h₀*Ωperp      # Dimensional lumen volume 
+# N     = 100     # Maximum polymer length 
+# k_Cd  = 1.0 # Complex desorption rate
+# k_Ca  = 0.01 # Complex adsorption rate
+# k_Sd  = 1.0 # Substrate desorption rate
+# k_Sa  = 0.01 # Substrate adsorption rate
+# k₁    = 1.0   # Complex formation forward reaction rate 
+# k₂    = 0.1   # Complex dissociation reverse reaction rate 
+# k₃    = 0.1   # Product formation
+# k₄    = 0.1  # Product dissociation 
+# 𝒞     = 100000.0
+# 𝒮     = 100000.0
+# ℰ     = 0.0001
+# D_C   = 0.0000001  # Monomer/polymer diffusivity
+# D_S   = 0.0000001  # Substrate diffusivity
+# Tᵣstar= 1000000000.0  # Release time
+# ϕ     = 0.5

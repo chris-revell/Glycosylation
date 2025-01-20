@@ -47,9 +47,9 @@ end
 function homogeneousWidthC(ν̃, K₂, K₄, α_C, β, t̃)
     Ẽ = K₂/(1+K₂)
     M = 1.0
-    ξ = ν̃ - Ẽ*β*t/(1+α_C)
+    ξ = ν̃ - Ẽ*β*t̃/(1+α_C)
     D = Ẽ*K₂*K₄/(1+α_C)
-    return (M/sqrt(4.0*π*D*t))*exp(-ξ^2/(4.0*D*t̃))
+    return (M/sqrt(4.0*π*D*t̃))*exp(-ξ^2/(4.0*D*t̃))
 end
 
 export T_r_star
