@@ -9,9 +9,21 @@ using Statistics
 # Integral of h*C over space 
 # hᵥ here is dimensionless thickness varying around mean of 1.0 and vertex weights are dimensinless
 # \ref{eq:tildeM}
-function M_tilde(u, W, dims, dν, hᵥ)
+function M̃(u, W, dims, dν, hᵥ)
     uInternal = reshape(W*hᵥ*u, dims...)
     return sum(uInternal, dims=(2:length(dims)))./dν
+end
+
+function M̃ϕ(u, W, dims, dν, hᵥ, ϕ)
+    M̃local = M̃(u, W, dims, dν, hᵥ)
+    M̃ϕ = dν*sum(M̃local[floor(Int64, ϕ*dims[1]) : dims[1]])
+    return M̃ϕ
+end
+
+# Dimensional bulk functional mass integrated over space and polymerisation 
+# \ref{eq:Mstar}
+function Mstarϕ(u, W, dims, dν, hᵥ, α_C, 𝒞, ϕ)
+    return M̃ϕ(u, W, dims, dν, hᵥ, ϕ)*α_C*𝒞/(π*(1+α_C))
 end
 
 function T_r_star(T̃ᵣ, N, ℰ, Ω, Ωperp, C_b, S_b, k₁, k₂, k₃, k_Ca, k_Cd, k_Sa, k_Sd)
@@ -21,17 +33,14 @@ function T_r_star(T̃ᵣ, N, ℰ, Ω, Ωperp, C_b, S_b, k₁, k₂, k₃, k_Ca, 
     return T_r_star
 end
 
-# Dimensional bulk functional mass integrated over space and polymerisation 
-# \ref{eq:Mstar}
-function M_star_ϕ(u, W, dims, dν, hᵥ, α_C, 𝒞, Ω, ϕ)
-    M̃ = M_tilde(u, W, dims, dν, hᵥ)
-    Mϕ = dν*sum(M̃[floor(Int64, ϕ*dims[1]) : dims[1]])
-    prefactor = α_C*𝒞/(π*(1+α_C))
-    return prefactor*Mϕ
-end
-
-function P_star(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ, Ωperp, k₁, ℰ, TᵣStar)
-    return M_star_ϕ(u, W, dims, dν, hᵥ, α_C, C_b, Ω, ϕ)/TᵣStar 
+function Pstar₅₀Analytic(h₀, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ) 
+    u = h₀/h_C
+    λ = h_C/h_S
+    ζ = (2*k₂*Ωperp)/(k₃*𝒮)
+    γ = (2*k₂*Ωperp)/(k₁*𝒞)
+    Δ = 2*k₂*k₄*Ωperp/(k₁*k₃*𝒮)
+    F = (u*(1-Δ*(1+λ*u)))/((1+u)*(1+ζ*(1+λ*u)*(1+u+(1/γ))))
+    return (k₁*𝒞*ℰ*N/ϕ)*F
 end
 
 function Pstar₅₀Analytic(h₀, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ) 
@@ -53,10 +62,10 @@ function homogeneousWidthC(ν̃, K₂, K₄, α_C, β, t̃)
 end
 
 export T_r_star
-export M_tilde
-export M_star_ϕ
+export M̃
+export M̃ϕ
+export Mstarϕ
 export P_star
-# export 𝓟starUniform
 export homogeneousWidthC
 export Pstar₅₀Analytic
 

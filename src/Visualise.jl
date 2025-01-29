@@ -78,11 +78,11 @@ function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
     @unpack dims, dν, W, hᵥ = p
     # Find limits
-    M = M_tilde(solu[end], W, dims, dν, hᵥ)
+    M = M̃(solu[end], W, dims, dν, hᵥ)
     minima = Float64[]
     maxima = Float64[]
     for u in solu        
-        M .= M_tilde(u, W, dims, dν, hᵥ)
+        M .= M̃(u, W, dims, dν, hᵥ)
         push!(minima, minimum(M))
         push!(maxima, maximum(M))
     end
@@ -98,7 +98,7 @@ function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
     lines!(ax, collect(range(0.0,1.0,dims[1])), M, linewidth=4)
     ylims!(ax, (globalmin, globalmax))
     record(fig, datadir("sims",subFolder, folderName, "spaceIntegralOver_ν_Movie.mp4"), 1:length(solu); framerate=10) do i
-        M[] .= M_tilde(solu[i], W, dims, dν, hᵥ)
+        M[] .= M̃(solu[i], W, dims, dν, hᵥ)
         M[] = M[]
     end
     save(datadir("sims",subFolder,folderName,"finalSpaceIntegralOver_ν.png"), fig)

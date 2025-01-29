@@ -22,7 +22,8 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
     
     Tᵣ   = k₁*ℰ*Tᵣstar/(2*Ωperp)   # Dimensionless release time 
     
-    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
+    # K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
+    K₂   = (k₂/(k₁*𝒞))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca) # Dimensionless complex formation net reaction rate
     K₃   = k₃/k₁                                            # Dimensionless product formation rate
     K₄   = k₄/k₁                                            # Dimensionless prodict dissociation rate
     # σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
@@ -39,8 +40,12 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
     h_C = 2*k_Ca/k_Cd
     h_S = 2*k_Sa/k_Sd
 
-
-    # λ = (𝒮/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
+    u = h₀/h_C
+    λ = h_C/h_S
+    ζ = (2*k₂*Ωperp)/(k₃*𝒮)
+    γ = (2*k₂*Ωperp)/(k₁*𝒞)
+    Δ = 2*k₂*k₄*Ωperp/(k₁*k₃*𝒮)
+    F = (u*(1-Δ*(1+λ*u)))/((1+u)*(1+ζ*(1+λ*u)*(1+u+(1/γ))))
 
     if checks 
         println("Small aspect ratio: Ω² << Ω⟂³min(1, D_C/k₁ℰ, D_S/k₁ℰ)")
@@ -98,21 +103,24 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
         printstyled("$(isapprox(K₄, 1.0, rtol=0.1))"; color = (isapprox(K₄, 1.0, rtol=0.1) ? :green : :red))
         println("")
 
-        # println("λ > 1")
-        # println("λ = $(λ)")
-        # printstyled("$(λ>1)"; color = (λ>1) ? :green : :red)
-        # println("")
-
-        # println("h₀ < 2k_Sa(λ-1)/k_Sd")
-        # println("h₀ = $(h₀), 2k_Sa(λ-1)/k_Sd = $(2.0*k_Sa*(λ-1)/k_Sd)")
-        # printstyled("$(h₀<(2.0*k_Sa*(λ-1)/k_Sd))"; color = (h₀<(2.0*k_Sa*(λ-1)/k_Sd)) ? :green : :red)
-        # println("")
-
     end
 
-    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝒟"=>𝒟, "β"=>β, "h_C"=>h_C, "h_S"=>h_S) #, "λ"=>λ)
+    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝒟"=>𝒟, "β"=>β, "h_C"=>h_C, "h_S"=>h_S,"u"=>u, "λ"=>λ, "ζ"=>ζ, "γ"=>γ, "Δ"=>Δ, "F"=>F) #, "λ"=>λ)
 end 
 
 export derivedParameters
 
 end
+
+
+
+# λ = (𝒮/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
+# println("λ > 1")
+# println("λ = $(λ)")
+# printstyled("$(λ>1)"; color = (λ>1) ? :green : :red)
+# println("")
+
+# println("h₀ < 2k_Sa(λ-1)/k_Sd")
+# println("h₀ = $(h₀), 2k_Sa(λ-1)/k_Sd = $(2.0*k_Sa*(λ-1)/k_Sd)")
+# printstyled("$(h₀<(2.0*k_Sa*(λ-1)/k_Sd))"; color = (h₀<(2.0*k_Sa*(λ-1)/k_Sd)) ? :green : :red)
+# println("")

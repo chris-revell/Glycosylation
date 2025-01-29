@@ -183,16 +183,6 @@ function edgePerpendicularAreaMatrix(dims, spacing)
     return Aperpₑ
 end
 
-function setBoundaryEdgesToZero(dims)
-    ghostMaskArray = fill(true, dims...)
-    for i=1:length(dims)
-        selectdim(ghostMaskArray1, i, 1) .= false
-        selectdim(ghostMaskArray1, i, dims[i]) .= false
-    end
-    ghostMask = reshape(ghostMaskArray, prod(dims))
-    return ghostMask
-end
-
 export solChecks
 export makeGhostVertexMask
 export makeGhostEdgeMask
@@ -202,9 +192,20 @@ export vertexVolumeWeightsInverseMatrix
 export edgeLengthMatrix
 export edgeLengthInverseMatrix
 export edgePerpendicularAreaMatrix
-export setBoundaryEdgesToZero
+# export setBoundaryEdgesToZero
 
 end
+
+# function setBoundaryEdgesToZero(dims)
+#     ghostMaskArray = fill(true, dims...)
+#     for i=1:length(dims)
+#         selectdim(ghostMaskArray1, i, 1) .= false
+#         selectdim(ghostMaskArray1, i, dims[i]) .= false
+#     end
+#     ghostMask = reshape(ghostMaskArray, prod(dims))
+#     return ghostMask
+# end
+
 
 # # Diagonal matrix of volumes around each edge, divided by 2 at the periphery
 # # Matrix of i-directed edge weights  
