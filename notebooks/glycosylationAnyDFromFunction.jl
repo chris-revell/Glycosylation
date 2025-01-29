@@ -1,4 +1,3 @@
-
 using OrdinaryDiffEq
 using SparseArrays
 using UnPack
@@ -20,20 +19,19 @@ using JLD2
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
-@from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
 #%%
 
 subFolder = ""
-terminateAt = "halfProduction"
+terminateAt = "nuWall"
 thicknessProfile = "uniform"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
 σGRF = 0.2
 
-nSpatialDims = 2
-Ngrid = 101
+nSpatialDims = 1
+Ngrid = 201
 dims = fill(Ngrid, nSpatialDims+1)
 
 include(projectdir("notebooks", "paramsRaw.jl"))
@@ -41,7 +39,7 @@ include(projectdir("notebooks", "paramsRaw.jl"))
 #%%
 
 derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S = derivedParams
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S,u, λ, ζ, γ, Δ, F = derivedParams
 
 #%%
 
@@ -56,19 +54,35 @@ mkpath(datadir("sims",subFolder,folderName))
 sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF, terminateAt=terminateAt)
 println("finished sim")
 
-# u = h₀/h_C
-# λ = h_C/h_S
-# ζ = (2*k₂*Ωperp)/(k₃*𝒮)
-# γ = (2*k₂*Ωperp)/(k₁*𝒞)
-# Δ = 2*k₂*k₄*Ωperp/(k₁*k₃*𝒮)
-# F = (u*(1-Δ*(1+λ*u)))/((1+u)*(1+ζ*(1+λ*u)*(1+u+(1/γ))))
+
+Tfactor = (N^2)*(K₂+σ*K₃)/(k₁*E₀)
+
+#%%
+
+M̃s = Vector{Float64}[]
+Mstarϕs = Float64[]
+M̃ϕs = Float64[]
+for i=1:length(sol.t)
+    push!(M̃s, M̃(sol.u[i], p.W, p.dims, p.dν, p.hᵥ)[:,1])
+    push!(M̃ϕs, M̃ϕ(sol.u[i], p.W, p.dims, p.dν, p.hᵥ, ϕ))
+    push!(Mstarϕs, p.dν*sum(M̃s[end][floor(Int64, ϕ*p.dims[1]) : p.dims[1]]) )
+end
+# prefactor = α_C*𝒞/(π*(1+α_C))
+# ind₅₀   = findfirst(x->x>=0.5*π, M̃ϕs)
 
 T̃ᵣ₅₀ = sol.t[end]
 Tᵣ₅₀ = T̃ᵣ₅₀*(N^2)*(K₂+σ*K₃)
 Tᵣ₅₀Star = Tᵣ₅₀/(k₁*E₀)
-@show P_star(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, C_b, Ω, ϕ, Ωperp, k₁, ℰ, Tᵣ₅₀Star)
-@show P_analy = Pstar₅₀Analytic(h₀, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ)
+# Tᵣ₅₀Star2 = T̃ᵣ₅₀*Tfactor
 
+a = h₀/h_C
+b = h₀/h_S
+𝒫₅₀StarNumeric1 = (((ℰ*(k₁*𝒞)^2)/(k₃*𝒮))*(a*(1+b))/((1+a)^2 * (1+ζ*(1+b))))/T̃ᵣ₅₀
+𝒫₅₀StarNumeric2 = α_C*π./(2.0.*Tᵣ₅₀Star)
+𝒫₅₀StarAnalytic = Pstar₅₀Analytic(h₀, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ)
+
+@show 𝒫₅₀StarNumeric1
+@show 𝒫₅₀StarAnalytic
 
 #%%
 
@@ -109,22 +123,20 @@ jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol, p, rawParams)
 if nSpatialDims==1
     concentrationSurfaceMovie(sol.u, dims; subFolder=subFolder, folderName=folderName)
     # concentrationHeatmapMovie(sol.u, dims; subFolder=subFolder, folderName=folderName)
-    # spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
-    # if thicknessProfile=="GRF"
-    #     thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
-    # end
-else
     spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
+    if thicknessProfile=="GRF"
+        thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
+    end
+else    
     uSlices = [selectdim(reshape(u, dims...), 3, dims[3]÷2) for u in sol.u]
     uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
-    concentrationSurfaceMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
-    concentrationHeatmapMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
+    concentrationSurfaceMovie(uSlicesReshaped, dims[1:2]; subFolder=subFolder, folderName=folderName)
+    # concentrationHeatmapMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
+    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
         thicknessPlot(hᵥ, dims; subFolder=subFolder, folderName=folderName)
     end
 end
-
-
 
 #%%
 
