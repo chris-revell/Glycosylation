@@ -126,7 +126,6 @@ fig = Figure(size=(1000,1000), fontsize=32, theme=textheme)
 ax1 = CairoMakie.Axis(fig[1, 1])
 
 allLines = []
-analyticLines = []
 allTs = []
 colorsUsed = [(:red), (:green), (:blue)]
 for (c,i) in enumerate([firstPositivetIndex, (length(sol.t)-firstPositivetIndex)÷2+firstPositivetIndex, length(sol.t)])

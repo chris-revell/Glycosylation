@@ -23,12 +23,12 @@ data = load(datadir("sims", subFolder, folderName, "output.jld2"))
 if length(p.dims)==2
     concentrationSurfaceMovie(sol.u, p.dims; subFolder=subFolder, folderName=folderName)
     concentrationHeatmapMovie(sol.u, p.dims; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     # if thicknessProfile=="GRF"
         # thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
     # end
 else
-    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     uSlices = [selectdim(reshape(u, p.dims...), 3, dims[3]÷2) for u in sol.u]
     uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
     concentrationSurfaceMovie(uSlicesReshaped, p.dims; subFolder=subFolder, folderName=folderName)

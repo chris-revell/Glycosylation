@@ -32,12 +32,12 @@ end
 if length(p.dims)==2
     concentrationSurfaceMovie(u, p.dims; subFolder=subFolder, folderName=folderName)
     concentrationHeatmapMovie(u, p.dims; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(u, p; subFolder=subFolder, folderName=folderName)
     # if thicknessProfile=="GRF"
         # thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
     # end
 else
-    spaceIntegralOver_ν_Movie(u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(u, p; subFolder=subFolder, folderName=folderName)
     uSlices = [selectdim(reshape(u, p.dims...), 3, dims[3]÷2) for u in u]
     uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
     concentrationSurfaceMovie(uSlicesReshaped, p.dims; subFolder=subFolder, folderName=folderName)
