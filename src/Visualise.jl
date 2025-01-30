@@ -11,20 +11,24 @@ using FromFile
 
 function thicknessPlot(hᵥ, dims; subFolder="", folderName="") 
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
-    fig = Figure()#size=(500,500))
-    ax = Axis(fig[1, 1])
-
+   
     mat_h = reshape([hᵥ[i,i] for i=1:prod(dims)], dims...)
 
     if length(dims) == 2
+        fig = Figure()#size=(600,500))
+        ax = Axis(fig[1, 1])    
         ax.xlabel = L"x"
         ax.ylabel = L"h"
         lines!(ax, mat_h[1,:])
         save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
     else
+        fig = Figure()#size=(600,500))
+        ax = Axis(fig[1, 1], aspect=DataAspect())
         ax.xlabel = L"x"
         ax.ylabel = L"y"
         heatmap!(ax, mat_h[1,:,:])
+        maxdif = max(abs(minimum(mat_h)-1.0), abs(maximum(mat_h)-1.0))
+        Colorbar(fig[1,2], limits=(1-maxdif, 1+maxdif), label=L"h(x)")
         save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
     end
     return nothing 
@@ -44,7 +48,7 @@ function concentrationSurfaceMovie(solu, dims; subFolder="", folderName="")
     clims = (globalmin,globalmax)
     # hidedecorations!(ax)
     νs = collect(range(0,1,dims[1]))
-    xs = collect(range(0,π^(1/length(dims)),dims[2]))
+    xs = collect(range(0,sqrt(π),dims[2]))
     surface!(ax, νs, xs, uInternal, colorrange=clims, colormap=:batlow)
     record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(solu); framerate=10) do i
         uInternal[] .= reshape(solu[i], dims...)
@@ -65,7 +69,7 @@ function concentrationHeatmapMovie(solu, dims; subFolder="", folderName="")
     globalmax = maximum([maximum(u) for u in solu])
     clims = (globalmin,globalmax)
     νs = collect(range(0,1,dims[1]))
-    xs = collect(range(0,π^(1/length(dims)),dims[2]))
+    xs = collect(range(0,sqrt(π),dims[2]))
     heatmap!(ax, νs, xs, uInternal, colorrange=clims, colormap=:batlow)
     record(fig, datadir("sims",subFolder,folderName,"concentrationHeatmapMovie.mp4"), 1:length(solu); framerate=10) do i
         uInternal[] .= reshape(solu[i], dims...)
@@ -74,7 +78,7 @@ function concentrationHeatmapMovie(solu, dims; subFolder="", folderName="")
     return nothing 
 end
 
-function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
+function M̃movie(solu, p; subFolder="", folderName="")
     isdir(datadir("sims", subFolder, folderName)) ? nothing : mkpath(datadir("sims", subFolder, folderName))
     @unpack dims, dν, W, hᵥ = p
     # Find limits
@@ -97,11 +101,11 @@ function spaceIntegralOver_ν_Movie(solu, p; subFolder="", folderName="")
     M = Observable(zeros(dims[1]))
     lines!(ax, collect(range(0.0,1.0,dims[1])), M, linewidth=4)
     ylims!(ax, (globalmin, globalmax))
-    record(fig, datadir("sims",subFolder, folderName, "spaceIntegralOver_ν_Movie.mp4"), 1:length(solu); framerate=10) do i
+    record(fig, datadir("sims",subFolder, folderName, "Mtildemovie.mp4"), 1:length(solu); framerate=10) do i
         M[] .= M̃(solu[i], W, dims, dν, hᵥ)
         M[] = M[]
     end
-    save(datadir("sims",subFolder,folderName,"finalSpaceIntegralOver_ν.png"), fig)
+    save(datadir("sims",subFolder,folderName,"Mtildefinal.png"), fig)
     return nothing
 end
 
@@ -132,7 +136,7 @@ end
 
 export concentrationSurfaceMovie
 export concentrationHeatmapMovie
-export spaceIntegralOver_ν_Movie
+export M̃movie
 # export productionHeatmap3D
 export thicknessPlot
 
