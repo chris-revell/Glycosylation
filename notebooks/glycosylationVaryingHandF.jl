@@ -252,7 +252,7 @@ for x=2:4
     M = M_tilde(sol1.u[frames[x-1]], p1.W, dims, p1.dν, p1.hᵥ)[:,1]
     lines!(subAxes[end], νs, M)
     xlims!(subAxes[end], (0.0,1.0))
-    ylims!(subAxes[end], (0.0,175.0))
+    ylims!(subAxes[end], (0.0,100.0))
     subAxes[end].xlabel = L"\nu"
     subAxes[end].xlabel = L"\tilde{M}"
     # linkyaxes!(axesVec[3], axesVec[end])
@@ -290,7 +290,7 @@ for x=2:4
     xlims!(subAxes[end], (0.0,1.0))
     subAxes[end].xlabel = L"\nu"
     subAxes[end].xlabel = L"\tilde{M}"
-    ylims!(subAxes[end], (0.0,175.0))
+    ylims!(subAxes[end], (0.0,100.0))
     # linkyaxes!(axesVec[3], axesVec[end])
     save(datadir("sims",subFolder,folderName,"2DFandHVariationSubFig$(length(subFigs)).png"), subFigs[end])
 end

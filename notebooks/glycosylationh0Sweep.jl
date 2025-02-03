@@ -76,7 +76,7 @@ for i=1:length(h₀s)
     push!(Tᵣ₅₀Stars, Tᵣ₅₀Star)
     push!(MstarsPhiSim, Mstarϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, 𝒞, ϕ))
     # push!(PstarsSim, (((ℰ*(k₁*𝒞)^2)/(k₃*𝒮))*(a*(1+b))/((1+a)^2 * (1+ζ*(1+b))))/T̃ᵣ₅₀ )
-    push!(PstarsSim, Mstarϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, 𝒞, ϕ)/Tᵣ₅₀Star )
+    push!(PstarsSim, Mstarϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, 𝒞, ϕ)/(π*Tᵣ₅₀Star) )
     push!(PstarsAnalytic, Pstar₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ))
 end
 

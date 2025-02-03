@@ -36,7 +36,7 @@ k₄    = 1.0  # Product dissociation
 ℰ     = 0.0000001
 D_C   = 0.000000001  # Monomer/polymer diffusivity
 D_S   = 0.000000001  # Substrate diffusivity
-Tᵣstar= 5000000000000000.0  # Release time
+Tᵣstar= 1000000000000000.0  # Release time
 ϕ     = 0.5
 
 using FromFile

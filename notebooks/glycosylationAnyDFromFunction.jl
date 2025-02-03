@@ -22,15 +22,15 @@ using JLD2
 
 #%%
 
-subFolder = ""
+subFolder = "2spatialD"
 terminateAt = "nuWall"
-thicknessProfile = "uniform"
+thicknessProfile = "GRF"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
 σGRF = 0.2
 
-nSpatialDims = 1
+nSpatialDims = 2
 Ngrid = 201
 dims = fill(Ngrid, nSpatialDims+1)
 
@@ -53,36 +53,6 @@ mkpath(datadir("sims",subFolder,folderName))
 
 sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF, terminateAt=terminateAt)
 println("finished sim")
-
-
-Tfactor = (N^2)*(K₂+σ*K₃)/(k₁*E₀)
-
-#%%
-
-M̃s = Vector{Float64}[]
-Mstarϕs = Float64[]
-M̃ϕs = Float64[]
-for i=1:length(sol.t)
-    push!(M̃s, M̃(sol.u[i], p.W, p.dims, p.dν, p.hᵥ)[:,1])
-    push!(M̃ϕs, M̃ϕ(sol.u[i], p.W, p.dims, p.dν, p.hᵥ, ϕ))
-    push!(Mstarϕs, p.dν*sum(M̃s[end][floor(Int64, ϕ*p.dims[1]) : p.dims[1]]) )
-end
-# prefactor = α_C*𝒞/(π*(1+α_C))
-# ind₅₀   = findfirst(x->x>=0.5*π, M̃ϕs)
-
-T̃ᵣ₅₀ = sol.t[end]
-Tᵣ₅₀ = T̃ᵣ₅₀*(N^2)*(K₂+σ*K₃)
-Tᵣ₅₀Star = Tᵣ₅₀/(k₁*E₀)
-# Tᵣ₅₀Star2 = T̃ᵣ₅₀*Tfactor
-
-a = h₀/h_C
-b = h₀/h_S
-𝒫₅₀StarNumeric1 = (((ℰ*(k₁*𝒞)^2)/(k₃*𝒮))*(a*(1+b))/((1+a)^2 * (1+ζ*(1+b))))/T̃ᵣ₅₀
-𝒫₅₀StarNumeric2 = α_C*π./(2.0.*Tᵣ₅₀Star)
-𝒫₅₀StarAnalytic = Pstar₅₀Analytic(h₀, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ)
-
-@show 𝒫₅₀StarNumeric1
-@show 𝒫₅₀StarAnalytic
 
 #%%
 
@@ -123,7 +93,7 @@ jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol, p, rawParams)
 if nSpatialDims==1
     concentrationSurfaceMovie(sol.u, dims; subFolder=subFolder, folderName=folderName)
     # concentrationHeatmapMovie(sol.u, dims; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
         thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
     end
@@ -132,30 +102,8 @@ else
     uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
     concentrationSurfaceMovie(uSlicesReshaped, dims[1:2]; subFolder=subFolder, folderName=folderName)
     # concentrationHeatmapMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
-    spaceIntegralOver_ν_Movie(sol.u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
-        thicknessPlot(hᵥ, dims; subFolder=subFolder, folderName=folderName)
+        thicknessPlot(p.hᵥ, dims; subFolder=subFolder, folderName=folderName)
     end
 end
-
-#%%
-
-# h₀ = 0.002
-# Ωperp = 10000    # Dimensional lumen footprint area
-# Ω     = h₀*Ωperp      # Dimensional lumen volume 
-# N     = 100     # Maximum polymer length 
-# k_Cd  = 1.0 # Complex desorption rate
-# k_Ca  = 0.01 # Complex adsorption rate
-# k_Sd  = 1.0 # Substrate desorption rate
-# k_Sa  = 0.01 # Substrate adsorption rate
-# k₁    = 1.0   # Complex formation forward reaction rate 
-# k₂    = 0.1   # Complex dissociation reverse reaction rate 
-# k₃    = 0.1   # Product formation
-# k₄    = 0.1  # Product dissociation 
-# 𝒞     = 100000.0
-# 𝒮     = 100000.0
-# ℰ     = 0.0001
-# D_C   = 0.0000001  # Monomer/polymer diffusivity
-# D_S   = 0.0000001  # Substrate diffusivity
-# Tᵣstar= 1000000000000.0  # Release time
-# ϕ     = 0.5

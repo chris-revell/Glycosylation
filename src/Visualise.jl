@@ -19,14 +19,17 @@ function thicknessPlot(hᵥ, dims; subFolder="", folderName="")
         ax = Axis(fig[1, 1])    
         ax.xlabel = L"x"
         ax.ylabel = L"h"
-        lines!(ax, mat_h[1,:])
+        lines!(ax, collect(range(0.0, sqrt(π), dims[2])), mat_h[1,:])
+        ax.xticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
         save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)
     else
         fig = Figure()#size=(600,500))
         ax = Axis(fig[1, 1], aspect=DataAspect())
         ax.xlabel = L"x"
         ax.ylabel = L"y"
-        heatmap!(ax, mat_h[1,:,:])
+        heatmap!(ax, collect(range(0.0, sqrt(π), dims[1])), collect(range(0.0, sqrt(π), dims[1])), mat_h[1,:,:])
+        ax.xticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
+        ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
         maxdif = max(abs(minimum(mat_h)-1.0), abs(maximum(mat_h)-1.0))
         Colorbar(fig[1,2], limits=(1-maxdif, 1+maxdif), label=L"h(x)")
         save(datadir("sims",subFolder,folderName,"thicknessPlot.png"), fig)

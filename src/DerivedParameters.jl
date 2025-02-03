@@ -22,8 +22,7 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
     
     Tᵣ   = k₁*ℰ*Tᵣstar/(2*Ωperp)   # Dimensionless release time 
     
-    # K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
-    K₂   = (k₂/(k₁*𝒞))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca) # Dimensionless complex formation net reaction rate
+    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
     K₃   = k₃/k₁                                            # Dimensionless product formation rate
     K₄   = k₄/k₁                                            # Dimensionless prodict dissociation rate
     # σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
