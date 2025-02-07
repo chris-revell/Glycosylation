@@ -22,13 +22,14 @@ using JLD2
 
 #%%
 
-subFolder = "2spatialD"
+subFolder = "Figure4"
 terminateAt = "nuWall"
 thicknessProfile = "GRF"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
-σGRF = 0.2
+σGRF = 0.3
+λGRF = 0.2
 
 nSpatialDims = 2
 Ngrid = 201
@@ -39,7 +40,7 @@ include(projectdir("notebooks", "paramsRaw.jl"))
 #%%
 
 derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S,u, λ, ζ, γ, Δ, F = derivedParams
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 #%%
 
@@ -51,7 +52,7 @@ mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF, terminateAt=terminateAt)
+sol, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF, λGRF=λGRF, terminateAt=terminateAt)
 println("finished sim")
 
 #%%
@@ -62,6 +63,7 @@ rawParams = (
     solver = solver,
     nOutputs = nOutputs,
     σGRF = σGRF,
+    λGRF = λGRF,
     nSpatialDims = nSpatialDims,
     Ngrid = Ngrid,
     dims = dims,

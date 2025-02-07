@@ -5,7 +5,7 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
 
     L₀   = sqrt(Ωperp/π)       # Dimensional mean cyclindrical radius of cisterna 
     # ℰ    = 2*Ωperp*E₀        # Dimensional total enzyme mass
-    E₀  = ℰ/2*Ωperp           # Dimensional mean enzyme concentration
+    E₀  = ℰ/(2*Ωperp)           # Dimensional mean enzyme concentration
     # Ω    = h₀*Ωperp           # Dimensional lumen volume
     h₀   = Ω/Ωperp             # Dimensional mean lumen thickness
     C_b  = 𝒞/Ω                 # Dimensional initial bulk monomeric cargo concentration
@@ -34,6 +34,8 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
     𝒟    = α_C*δ_C*N^2*(K₂ + σ*K₃)    # Dimensionless parameter on diffusion term, derived from combination of other terms
     β    = N*(σ*K₃ - K₂*K₄)           # Dimensionless parameter on advection term, derived from combination of other terms 
 
+    # T₀ = 1/(k₁*E₀)
+    # T̃₀ = T₀/((N^2)*(K₂ + σ*K₃))
     T̃ᵣ   = Tᵣ/((N^2)*(K₂+σ*K₃))
 
     h_C = 2*k_Ca/k_Cd
@@ -104,7 +106,7 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
 
     end
 
-    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝒟"=>𝒟, "β"=>β, "h_C"=>h_C, "h_S"=>h_S,"u"=>u, "λ"=>λ, "ζ"=>ζ, "γ"=>γ, "Δ"=>Δ, "F"=>F) #, "λ"=>λ)
+    return Dict("L₀"=>L₀, "E₀"=>E₀, "C_b"=>C_b, "S_b"=>S_b, "δ_C"=>δ_C, "δ_S"=>δ_S, "α_C"=>α_C, "α_S"=>α_S, "C₀"=>C₀, "S₀"=>S₀, "Tᵣ"=>Tᵣ, "T̃ᵣ"=>T̃ᵣ, "K₂"=>K₂, "K₃"=>K₃, "K₄"=>K₄, "σ"=>σ, "ϵ"=>ϵ, "𝒟"=>𝒟, "β"=>β, "h_C"=>h_C, "h_S"=>h_S, "λ"=>λ, "ζ"=>ζ, "γ"=>γ, "Δ"=>Δ, "F"=>F)
 end 
 
 export derivedParameters

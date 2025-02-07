@@ -67,8 +67,8 @@ function hFun(dims; λ=0.1, σ=0.1)
     else
         # cov = CovarianceFunction(length(dims)-1, Exponential(λ, σ=σ))# Gaussian(λ, σ=σ))
         cov = CovarianceFunction(length(dims)-1, Gaussian(λ, σ=σ))
-        pts1 = range(0, stop=1, length=dims[2])
-        pts2 = range(0, stop=1, length=dims[3])
+        pts1 = range(0, stop=sqrt(π), length=dims[2])
+        pts2 = range(0, stop=sqrt(π), length=dims[3])
         grf = GaussianRandomField(cov, CirculantEmbedding(), pts1, pts2, minpadding=113)
         # grf = GaussianRandomField(cov, Cholesky(), pts1, pts2, minpadding=10001)
         mat_hSlice = sample(grf)[1:dims[2], 1:dims[3]]
@@ -82,12 +82,12 @@ function hFun(dims; λ=0.1, σ=0.1)
 end
 
 function hFunGaussian(dims; σ=0.5, μ=0.5)
-    xMax = π^(1/(length(dims)-1))
+    xMax = sqrt(π)
     xs   = collect(range(0.0, xMax, dims[2]))
     σx = xMax*σ
     μx = xMax*μ
     if length(dims) == 2
-        mat_hSlice = [1.1 + 0.75*exp(-(x-μx)^2/σx^2) for x in xs]
+        mat_hSlice = [1.1 + 1.0*exp(-(x-μx)^2/σx^2) for x in xs]
         mat_h = zeros(dims...)
         for i=1:dims[1]
             selectdim(mat_h, 1, i) .= mat_hSlice
@@ -99,7 +99,7 @@ function hFunGaussian(dims; σ=0.5, μ=0.5)
         for i=1:dims[1]
             for j=1:dims[2]
                 # selectdim(mat_h, 1, i) .= [0.1 + exp(-(x-μx)^2/σx^2 - (xs[i]-μx)^2/σx^2 ) for x in xs]
-                mat_h[i, j, :] .= [1.1 + 0.75*exp(-(x-μx)^2/σx^2 - (xs[j]-μx)^2/σx^2 ) for x in xs]
+                mat_h[i, j, :] .= [1.1 + 1.0*exp(-(x-μx)^2/σx^2 - (xs[j]-μx)^2/σx^2 ) for x in xs]
             end
         end
         mat_h .= mat_h./mean(mat_h)
@@ -107,30 +107,15 @@ function hFunGaussian(dims; σ=0.5, μ=0.5)
     end
 end
 
-# function conditionHalfProduction(u, t, integrator)
-#     # uInternal = reshape(integrator.p.W*integrator.p.hᵥ*u, integrator.p.dims...)
-#     # M̃ = sum(uInternal, dims=(2:length(integrator.p.dims)))
-#     # Mϕ = sum(M̃[ceil(Int, 0.5*integrator.p.dims[1]) : integrator.p.dims[1]])
-#     M̃ϕ(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ, 0.5) > 0.5*π  ? true : false
-# end
-
 function conditionHalfProduction(u, t, integrator)
-    # uInternal = reshape(integrator.p.W*integrator.p.hᵥ*u, integrator.p.dims...)
-    # M̃ = sum(uInternal, dims=(2:length(integrator.p.dims)))
-    # Mϕ = sum(M̃[ceil(Int, 0.5*integrator.p.dims[1]) : integrator.p.dims[1]])
     M̃ϕ(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ, 0.5) - 0.5*π  
 end
 
 function conditionNuWall(u, t, integrator)
-    uInternal = reshape(u, integrator.p.dims...)
-    findmax(uInternal)[2].I[1] > 0.8*integrator.p.dims[1] ? true : false
+    # uInternal = reshape(u, integrator.p.dims...)
+    # findmax(uInternal)[2].I[1] > 0.8*integrator.p.dims[1] ? true : false
+    findmax(M̃(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ))[2].I[1] > 0.9*integrator.p.dims[1] ? true : false
 end
-
-# function affectTerminate!(integrator)
-#     # if condition function returns true, terminate integrator and pass successful return code    
-#     terminate!(integrator, ReturnCode.Success)    
-#     println("Terminate")
-# end
 
 affectTerminate!(integrator) = terminate!(integrator, ReturnCode.Success)    
 
@@ -142,12 +127,8 @@ cbNuWall = DiscreteCallback(conditionNuWall, affectTerminate!)
 # When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
 # Function is agnostic about the whether dims is of length 2 or 3.
 function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
-    # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
-    # cs = selectdim(reshape(u, dims...), 1, 2:(dims[1]-1))
     uMat = reshape(u, dims...)
-
     integ = dν.*(sum(uMat, dims=1) .- 0.5.*selectdim(uMat, 1, 1) .- 0.5.*selectdim(uMat, 1, 1))
-
     # integ = dν.*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))
     for slice in eachslice(matE, dims=1)
         slice .= matFₑ.*(K₂./(K₂ .+ selectdim(integ, 1, 1)))
