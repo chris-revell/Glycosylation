@@ -95,80 +95,29 @@ rawParams = (
 
 jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol1, p1, sol2, p2, rawParams)
 
-textheme = Theme(fonts=(; regular=texfont(:text),
-                        bold=texfont(:bold),
-                        italic=texfont(:italic),
-                        bold_italic=texfont(:bolditalic)),
-                        fontsize=32)
+# textheme = Theme(fonts=(; regular=texfont(:text),
+#                         bold=texfont(:bold),
+#                         italic=texfont(:italic),
+#                         bold_italic=texfont(:bolditalic)),
+#                         fontsize=32)
 
 #%%
 
-# fig = Figure(size=(1000,1000), theme=textheme)
-# ax = CairoMakie.Axis(fig[1, 1])
 
-# allLines = []
-# labels = []
 colorsUsed = [(:red), (:green), (:blue)]
-# for (i,u) in enumerate(sol1.u[1:length(sol1.u)÷2-1:end])
-#     M̃local = M̃(u, p.W, p.dims, p.dν, p.hᵥ)
-#     # uInternal = reshape(p.W*p.hᵥ*u, p.dims...)
-#     # M̃local = sum(uInternal, dims=(2:length(dims)))./dν
-#     push!(allLines, lines!(ax, collect(range(0.0, 1.0, p.dims[1])), M̃local[:,1,1], linestyle=:solid, color=(colorsUsed[i], 0.5), linewidth=4))
-#     str = @sprintf("%.2f", sol1.t[i])
-#     push!(labels, L"\tilde{t}=%$(str)")
-# end
-
-# axislegend(ax, allLines, labels)
-# ax.xlabel = L"\nu"
-# ax.ylabel = L"\tilde{M}"
-# ylims!(ax, (0.0, maximum(sol1.u[1])))
-# xlims!(ax, (0.0, 1.0))
-
-# save(datadir("sims", subFolder, folderName, "M̃.png"), fig)
-# # display(fig)
+νs = collect(range(0.0,1.0,p1.dims[1]))
+xs = collect(range(0.0,sqrt(π),p1.dims[2]))
 
 
-# #%%
 
-# fig = Figure(size=(1000,1000), theme=textheme)
-# allAxes = []
-# # allLines = []
-# # labels = []
-# # colorsUsed = [(:red), (:green), (:blue)]
-# for (i,u) in enumerate(sol1.u[1:length(sol1.u)÷2-1:end])
-#     push!(allAxes, CairoMakie.Axis(fig[i, 1], aspect=1))
-#     uInternal = reshape(u, p.dims...)[:,:,p.dims[3]÷2]
-#     allAxes[end].xlabel = L"\nu"
-#     allAxes[end].ylabel = L"x"
-#     # globalmin = minimum([minimum(u) for u in solu])
-#     # globalmax = maximum([maximum(u) for u in solu])
-#     # clims = (globalmin,globalmax)
-#     νs = collect(range(0,1,p.dims[1]))
-#     xs = collect(range(0,sqrt(π),p.dims[2]))
-#     heatmap!(allAxes[end], νs, xs, uInternal)#, colorrange=clims, colormap=:batlow)
+fig = Figure(size=(1000,1000), fontsize=32, figure_padding=110)#, theme=textheme)
 
-#     push!(allAxes, CairoMakie.Axis(fig[i, 2]))    
-#     M̃local = M̃(u, p.W, p.dims, p.dν, p.hᵥ)
-#     lines!(allAxes[end], collect(range(0.0, 1.0, p.dims[1])), M̃local[:,1,1], linestyle=:solid, color=(colorsUsed[i], 0.5), linewidth=4)
-#     # str = @sprintf("%.2f", sol1.t[i])
-#     # push!(labels, L"\tilde{t}=%$(str)")
-#     allAxes[end].xlabel = L"\nu"
-#     allAxes[end].ylabel = L"\tilde{M}"
-# end
-
-# display(fig)
-# save(datadir("sims", subFolder, folderName, "Figure6.png"), fig)
-
-# thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName) 
-
-
-#%%
-
-fig = Figure(size=(1500,500), figure_padding=30, theme=textheme)
+g1 = GridLayout(fig[1,1])
+g2 = GridLayout(fig[2,1])
 
 mat_h = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
 
-ax0 = Axis(fig[1, 1], aspect=DataAspect())
+ax0 = Axis(g1[1, 1], aspect=DataAspect())
 ax0.xlabel = L"x"
 ax0.ylabel = L"y"
 maxdif = max(abs(minimum(mat_h)-1.0), abs(maximum(mat_h)-1.0))
@@ -183,11 +132,11 @@ peakxs = xs[[indMax, indMin]]
 hlines!(ax0, sqrt(π)/2.0, color=(:black, 0.5), linewidth=4)
 scatter!(ax0, peakxs, [sqrt(π)/2.0, sqrt(π)/2.0], marker=:star6, color=:orange, markersize=20)
 
-Colorbar(fig[1,2], limits=clim, label=L"h(x)")
+Colorbar(g1[1,2], limits=clim, label=L"h(x)")
 
 
 
-ax1 = CairoMakie.Axis(fig[1, 3])
+ax1 = CairoMakie.Axis(g1[1, 3])
 uInternal = zeros(Float64, p1.dims[1:2]...)
 for (i, u) in enumerate(sol1.u[1:length(sol1.u)÷2-1:end])
     uInternal .= max.(uInternal, reshape(u, p1.dims...)[:,:,p1.dims[3]÷2])
@@ -197,8 +146,6 @@ ax1.ylabel = L"x"
 # globalmin = minimum([minimum(u) for u in solu])
 # globalmax = maximum([maximum(u) for u in solu])
 # clims = (globalmin,globalmax)
-νs = collect(range(0.0,1.0,p1.dims[1]))
-xs = collect(range(0.0,sqrt(π),p1.dims[2]))
 ax1.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt\pi"])
 clim = (0.0, 30.0)
 heatmap!(ax1, νs, xs, uInternal, colorrange=clim )#, colorrange=clims, colormap=:batlow)
@@ -206,9 +153,9 @@ heatmap!(ax1, νs, xs, uInternal, colorrange=clim )#, colorrange=clims, colormap
 scatter!(ax1, [0.0, 0.0], peakxs, marker=:star6, color=:orange, markersize=20)
 hlines!(ax1, peakxs, color=:orange, linewidth=4)
 
-Colorbar(fig[1,4], limits=clim, label=L"\tilde{C}(x)")
+Colorbar(g1[1,4], limits=clim, label=L"\tilde{C}(x)")
 
-ax2 = CairoMakie.Axis(fig[1, 5])
+ax2 = CairoMakie.Axis(g2[1, 2])
 M̃local = zeros(Float64, p1.dims[1])
 allLines = []
 labels = []
@@ -216,17 +163,17 @@ for (c,i) in enumerate([1, min(length(sol1.t), length(sol2.t))÷2, min(length(so
     M̃local .= M̃(sol1.u[i], p1.W, p1.dims, p1.dν, p1.hᵥ)
     push!(allLines, lines!(ax2, collect(range(0.0, 1.0, p1.dims[1])), M̃local[:,1,1], linestyle=:solid, color=(colorsUsed[c], 0.5), linewidth=4))
     str = @sprintf("%.2f", sol1.t[i])
-    push!(labels, L"\tilde{t}=%$(str), GRF")
+    push!(labels, L"\tilde{t}=%$(str),\ GRF")
 
     M̃local .= M̃(sol2.u[i], p2.W, p2.dims, p2.dν, p2.hᵥ)
     push!(allLines, lines!(ax2, collect(range(0.0, 1.0, p1.dims[1])), M̃local[:,1,1], linestyle=:dot, color=(colorsUsed[c], 0.5), linewidth=4))
     str = @sprintf("%.2f", sol1.t[i])
-    push!(labels, L"\tilde{t}=%$(str), Uniform")
+    push!(labels, L"\tilde{t}=%$(str),\ Uniform")
 end
 ax2.xlabel = L"\nu"
 ax2.ylabel = L"\tilde{M}"
 # axislegend(ax2, allLines, labels)
-Legend(fig[1,6], allLines, labels)
+Legend(g2[1,3], allLines, labels, labelsize = 16)
 xlims!(ax2, (0.0, 1.0))
 mlim = (0.0, 50.0)
 ylims!(ax2, mlim)#maximum(M̃(sol1.u[1], p1.W, p1.dims, p1.dν, p1.hᵥ))))
@@ -234,14 +181,22 @@ ylims!(ax2, mlim)#maximum(M̃(sol1.u[1], p1.W, p1.dims, p1.dν, p1.hᵥ))))
 tight_ticklabel_spacing!(ax0)
 
 
-colsize!(fig.layout, 1, Aspect(1, 1.0))
-colsize!(fig.layout, 3, Aspect(1, 1.0))
-colsize!(fig.layout, 5, Aspect(1, 1.0))
 
-Label(fig[2,1,Top()], L"(a)")
-Label(fig[2,3,Top()], L"(b)")
-Label(fig[2,5,Top()], L"(c)")
-rowsize!(fig.layout, 2, Relative(0.02))
+Label(g1[2,1,Top()], L"(a)")
+Label(g1[2,3,Top()], L"(b)")
+Label(g2[2,2,Top()], L"(c)")
+
+
+
+colsize!(g1, 1, Aspect(1, 1.0))
+colsize!(g1, 2, Aspect(1, 0.1))
+colsize!(g1, 3, Aspect(1, 1.0))
+colsize!(g1, 4, Aspect(1, 0.1))
+colsize!(g2, 2, Aspect(1, 1.5))
+# colsize!(g2, 3, Aspect(1, 1.5))
+
+rowsize!(g1, 2, Relative(0.02))
+rowsize!(g2, 2, Relative(0.02))
 
 resize_to_layout!(fig)
 display(fig)

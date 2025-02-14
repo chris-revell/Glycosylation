@@ -157,7 +157,34 @@ xs = collect(range(0.0, xMax, dims[2]))
 
 letterArray = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)", "(j)", "(k)", "(l)", "(m)", "(n)", "(o)", "(p)"]
 
-axesVec = [Axis(fig[1,1])]
+
+
+g1 = GridLayout(fig[1,1])
+
+ax1 = Axis(fig[1,2:4])
+for x=1:3
+    uInternal = reshape(sol1.u[frames[x]], dims...)
+    heatmap!(ax1, νs.+(x-1)*1.0, xs, uInternal, colormap=:batlow)
+end
+
+
+display(fig)
+
+Label(fig[2,x,Top()], popfirst!(letterArray))
+
+
+
+
+
+
+
+
+axesVec = [Axis(fig[1,1], alignmode = Mixed(
+    left = Makie.Protrusion(0),
+    right = Makie.Protrusion(0),
+    bottom = Makie.Protrusion(0),
+    top = Makie.Protrusion(0),
+))]
 Label(fig[2,1,Top()], popfirst!(letterArray))
 lines!(axesVec[1], mat_h1[1,:], xs)
 xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h1[1,:])))
@@ -165,7 +192,12 @@ ylims!(axesVec[1], (0.0, xMax))
 axesVec[end].yticks = (0.0:sqrt(π)/2.0:sqrt(π), [L"0.0", L"\sqrt{\pi}/2", L"\sqrt{\pi}"])
 for x=2:4
     uInternal = reshape(sol1.u[frames[x-1]], dims...)
-    push!(axesVec, Axis(fig[1,x]))
+    push!(axesVec, Axis(fig[1,x], alignmode = Mixed(
+        left = Makie.Protrusion(0),
+        right = Makie.Protrusion(0),
+        bottom = Makie.Protrusion(0),
+        top = Makie.Protrusion(0),
+    )))
     # tString = @sprintf("%.3f", sol2.t[frames[x-1]])
     # Label(fig[1,x, Top()], L"\tilde{t} = %$tString")
     Label(fig[2,x,Top()], popfirst!(letterArray))
@@ -173,13 +205,23 @@ for x=2:4
 end
 
 for x=2:4  
-    push!(axesVec, Axis(fig[3,x]))
+    push!(axesVec, Axis(fig[3,x], alignmode = Mixed(
+        left = Makie.Protrusion(0),
+        right = Makie.Protrusion(0),
+        bottom = Makie.Protrusion(0),
+        top = Makie.Protrusion(0),
+    )))
     Label(fig[4,x,Top()], popfirst!(letterArray))
     M = M̃(sol1.u[frames[x-1]], p1.W, dims, p1.dν, p1.hᵥ)[:,1]
     lines!(axesVec[end], νs, M)
 end
 
-push!(axesVec, Axis(fig[5,1]))
+push!(axesVec, Axis(fig[5,1], alignmode = Mixed(
+    left = Makie.Protrusion(0),
+    right = Makie.Protrusion(0),
+    bottom = Makie.Protrusion(0),
+    top = Makie.Protrusion(0),
+)))
 Label(fig[6,1,Top()], popfirst!(letterArray))
 lines!(axesVec[end], p2.matFₑ, xs)
 xlims!(axesVec[end], (0.0, 1.2*maximum(p2.matFₑ)))
@@ -187,13 +229,23 @@ ylims!(axesVec[end], (0.0, xMax))
 axesVec[end].yticks = (0.0:sqrt(π)/2.0:sqrt(π), [L"0.0", L"\sqrt{\pi}/2", L"\sqrt{\pi}"])
 for x=2:4
     uInternal = reshape(sol2.u[frames[x-1]], dims...)
-    push!(axesVec, Axis(fig[5,x]))
+    push!(axesVec, Axis(fig[5,x],alignmode = Mixed(
+        left = Makie.Protrusion(0),
+        right = Makie.Protrusion(0),
+        bottom = Makie.Protrusion(0),
+        top = Makie.Protrusion(0),
+    )))
     Label(fig[6,x,Top()], popfirst!(letterArray))
     heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
 end
 
 for x=2:4
-    push!(axesVec, Axis(fig[7,x]))
+    push!(axesVec, Axis(fig[7,x], alignmode = Mixed(
+        left = Makie.Protrusion(0),
+        right = Makie.Protrusion(0),
+        bottom = Makie.Protrusion(0),
+        top = Makie.Protrusion(0),
+    )))
     Label(fig[8,x,Top()], popfirst!(letterArray))
     M = M̃(sol2.u[frames[x-1]], p2.W, dims, p2.dν, p2.hᵥ)[:,1]
     lines!(axesVec[end], νs, M)
@@ -221,9 +273,10 @@ for ax in axesVec[5:7]
     ylims!(ax, (0.0,40.0))
     ax.xticks = (0.0:0.5:1.0, [L"0.0", L"0.5", L"1.0"])
     ax.yticks = (0.0:20.0:40.0, [L"0.0", L"20.0", L"40.0"])
-    ax.xticklabelsvisible = false
+    # ax.xticklabelsvisible = false
     ax.yticklabelsvisible = false
 end
+axesVec[5].yticklabelsvisible = true
 
 axesVec[8].xlabel = L"F_e"
 axesVec[8].ylabel = L"x"
@@ -245,9 +298,10 @@ for ax in axesVec[12:end]
     ylims!(ax, (0.0,40.0))
     ax.xticks = (0.0:0.5:1.0, [L"0.0", L"0.5", L"1.0"])
     ax.yticks = (0.0:20.0:40.0, [L"0.0", L"20.0", L"40.0"])
-    ax.xticklabelsvisible = false
+    # ax.xticklabelsvisible = false
     ax.yticklabelsvisible = false
 end
+axesVec[12].yticklabelsvisible = true
 
 colsize!(fig.layout, 1, Aspect(1, 1.0))
 colsize!(fig.layout, 2, Aspect(1, 1.0))
