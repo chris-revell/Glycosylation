@@ -15,13 +15,8 @@ using Statistics
 using JLD2
 using MathTeXEngine # required for texfont
 
-textheme = Theme(fonts=(; regular=texfont(:text),
-                        bold=texfont(:bold),
-                        italic=texfont(:italic),
-                        bold_italic=texfont(:bolditalic)))
-
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
-@from "$(srcdir("Visualise.jl"))" using Visualise
+# @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
@@ -66,7 +61,8 @@ for i=1:length(h₀s)
     Tᵣ₅₀Star = sols[i].t[end]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)
     Tᵣ₅₀Analytic = ((N^2)*(K₂+σ*K₃)/(k₁*E₀))*T̃ᵣ₅₀Analytic(𝒞, 𝒮, ϕ, h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, N, 0.0, 0.0)
     push!(𝒫sim, Mstarϕ(sols[i].u[end], ps[i].W, ps[i].dims, ps[i].dν, ps[i].hᵥ, α_C, 𝒞, ϕ)/Tᵣ₅₀Star)
-    push!(𝒫analytic, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀Analytic )
+    # push!(𝒫analytic, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀Analytic )
+    push!(𝒫analytic, 𝒫star₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ) )
 
     midpoint = length(sols[i].u)
     C_peak, ind_peak = findmax(reshape(sols[i].u[midpoint], ps[i].dims...)[:,1])
@@ -95,7 +91,8 @@ for h₀cut in [hcutoff]
     # ν₀ = ν_peak - Ẽ*β*(sol1.t[midpoint]-t̃₀)/(1+α_C)
     
     Tᵣ₅₀Analytic = ((N^2)*(K₂+σ*K₃)/(k₁*E₀))*T̃ᵣ₅₀Analytic(𝒞, 𝒮, ϕ, h₀cut, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, N, 0.0, 0.0)
-    push!(𝒫analytic, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀Analytic )
+    # push!(𝒫analytic, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀Analytic )
+    push!(𝒫analytic, 𝒫star₅₀Analytic(h₀cut, h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ) )
     push!(𝒫analyticAdjusted, 0.0 )
 end
 
@@ -158,7 +155,7 @@ t̃₀ = sol1.t[midpoint] - 1/(4.0*π*D*C_peak^2)
 tsOffset = sol1.t.-t̃₀
 firstPositivetIndex = findfirst(x->x>0, tsOffset)
 
-# fig = Figure(size=(1000,1000), fontsize=32, theme=textheme)
+# fig = Figure(size=(1000,1000), fontsize=32)
 # ax1 = CairoMakie.Axis(fig[1, 1])
 # ax1.xlabel = L"\nu"
 # ax1.ylabel = L"\tilde{C}"
@@ -207,7 +204,7 @@ firstPositivetIndex = findfirst(x->x>0, tsOffset)
 
 #%%
 
-fig = Figure(size=(1200,1200), fontsize=32, figure_padding = 40)#, theme=textheme)
+fig = Figure(size=(1200,1200), fontsize=32, figure_padding = 40)
 
 g1 = GridLayout(fig[1,1])
 g2 = GridLayout(fig[2,1])
@@ -287,39 +284,23 @@ axislegend(ax2, allLines, allLabels, labelsize = 16, position = :lt)
 # axislegend(ax2, allLines, allLabels, labelsize = 16, position = :lt)
 
 
-
 linesVec_ax3 = []
 labelsVec_ax3 = []
-
 ax3 = Axis(g2[1,1])
-
 Label(g2[2,1,Top()], "(c)")
 linesVec_ax3 = []
 labelsVec_ax3 = []
-# push!(linesVec_ax3, lines!(ax3, h₀s, 𝒫simEq50, color=:red), linewidth=4)
-# push!(labelsVec_ax3, "Equation 50")
-
-
 hcutoff = (2.0*k_Sa/k_Sd)*((𝒮*k₁*k₃)/(2.0*Ωperp*k₂*k₄) - 1.0)
-
 push!(linesVec_ax3, lines!(ax3, h₀s, 𝒫sim, color=(:red, 0.5), linewidth=4))
 push!(labelsVec_ax3, "Numeric")
-
 push!(linesVec_ax3, lines!(ax3, [0.0, h₀s..., hcutoff], 𝒫analytic, color=(:blue, 1.0), linewidth=4, linestyle=:dot))
 push!(labelsVec_ax3, "Asymptotic")
-
 push!(linesVec_ax3, vlines!(ax3, h_C, color=(:black, 0.5)))#, linewidth=4))
-# push!(labelsVec_ax3, L"h_C")
 push!(linesVec_ax3, vlines!(ax3, h_S, color=(:black, 0.5)))#, linewidth=4))
-# push!(labelsVec_ax3, L"h_S")
-
 push!(linesVec_ax3, vlines!(ax3, hcutoff, color=(:black, 0.5)))#, linewidth=4))
-# push!(labelsVec_ax3, L"h_{cut-off}")
 
 ax3.xticks = ([0.0, h_C, h_S, hcutoff], [L"0.0", L"  h_C", L"h_S", L"h_{cut-off}"])
-# ax3.xticks = ([h_C, h_S, hcutoff], [L"h_C", L"h_S", L"h_{cut-off}"])
 ax3.yticks = ([0.0, 0.0001, 0.0002, 0.0003, 0.0004], [L"0.0", L"1.0", L"2.0", L"3.0", L"4.0"])
-
 ax3.xaxis.elements[:ticklabels].align = tuple.([:right, :left, :center, :center], :top)
 
 xlims!(ax3, (0.0, 1.05*maximum([maximum(h₀s), h_C, h_S, hcutoff])))
@@ -343,23 +324,3 @@ display(fig)
 
 @show t̃₀
 @show ν₀
-
-#%%
-
-# 𝒫simEq50 = 𝒫star₅₀Numeric.(N, k₁, k₂, k₃, 𝒞, ℰ, 𝒮, h₀s, k_Ca, k_Cd, k_Sa, k_Sd, Ωperp, [s.t[end] for s in sols])
-
-# fig2 = Figure(size=(1000,500), fontsize=32, figure_padding = 30)#, theme=textheme)
-# ax21 = Axis(fig2[1, 1])
-# # ax22 = Axis(fig2[2, 1])
-# # ax23 = Axis(fig2[3, 1])
-# l1 = lines!(ax21, h₀s, 𝒫sim, color=(:black, 0.5), linewidth=8)
-# # Label(fig2[1, 1, Top()], L"M^*_\phi/T^*_{r50}")
-# # l2 = lines!(ax21, h₀s, 𝒫analytic, color=:green, linewidth=8)
-# # Label(fig2[2, 1, Top()], L"Equation 57")
-# l3 = lines!(ax21, h₀s, 𝒫simEq50, color=(:red, 1.0), linestyle=:dot, linewidth=8)
-# # Label(fig2[3, 1, Top()], L"Equation 50")
-
-# axislegend(ax21, [l1, l2, l3], ["Eq46/48", "Eq57", "Eq50"], labelsize = 16)
-
-# display(fig2)
-# save(datadir("sims", subFolder, folderName, "Figure2b.png"), fig2)
