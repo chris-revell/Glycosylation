@@ -188,3 +188,6 @@ resize_to_layout!(fig)
 
 display(fig)
 save(datadir("sims",subFolder,folderName,"Figure3.png"), fig)
+
+@show sol1.t[frames]
+@show sol2.t[frames]
