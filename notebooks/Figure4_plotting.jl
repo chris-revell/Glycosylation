@@ -79,7 +79,7 @@ ax1.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt\pi"])
 ax1.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
 clim = (0.0, 30.0)
 heatmap!(ax1, νs, xs, uInternal, colorrange=clim )
-scatter!(ax1, [0.0, 0.0], peakxs, marker=:star6, color=:white, markersize=20)
+# scatter!(ax1, [0.0, 0.0], peakxs, marker=:star6, color=:white, markersize=20)
 hlines!(ax1, peakxs, color=:white, linewidth=2)
 text!(ax1, Point{2,Float64}(0.95,0.9*sqrt(π)), text="(b)", color=:white, align=(:right, :bottom)) 
 Colorbar(g1[1,4], limits=clim, label=L"\tilde{C}(x)")
@@ -126,4 +126,5 @@ resize_to_layout!(fig)
 display(fig)
 save(datadir("sims", subFolder, folderName, "Figure4.png"), fig)
 
-
+@show sol1.t[frameInds]
+@show sol2.t[frameInds]
