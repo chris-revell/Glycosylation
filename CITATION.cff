@@ -8,8 +8,7 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: Christopher
-    name-particle: K
+  - given-names: Christopher K.
     family-names: Revell
     email: christopher.revell@manchester.ac.uk
     affiliation: 'Department of Mathematics, University of Manchester'
