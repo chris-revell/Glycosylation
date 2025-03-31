@@ -54,7 +54,7 @@ clim = (1-maxdif, 1+maxdif)
 heatmap!(ax0, collect(range(0.0, sqrt(π), p1.dims[1])), collect(range(0.0, sqrt(π), p1.dims[1])), mat_h[1,:,:], colorrange=clim)
 ax0.xticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
 ax0.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-text!(ax0, Point{2,Float64}(0.95*sqrt(π),0.9*sqrt(π)), text="(a)", color=:white, align=(:right, :bottom)) 
+text!(ax0, Point{2,Float64}(0.95*sqrt(π), 0.85*sqrt(π)), text="A", color=:white, align=(:right, :bottom), fontsize=24) 
 indMax = findmax(mat_h1[1,:,p1.dims[3]÷2])[2]
 indMin = findmin(mat_h1[1,:,p1.dims[3]÷2])[2]
 peakxs = xs[[indMax, indMin]]
@@ -81,7 +81,7 @@ clim = (0.0, 30.0)
 heatmap!(ax1, νs, xs, uInternal, colorrange=clim )
 # scatter!(ax1, [0.0, 0.0], peakxs, marker=:star6, color=:white, markersize=20)
 hlines!(ax1, peakxs, color=:white, linewidth=2)
-text!(ax1, Point{2,Float64}(0.95,0.9*sqrt(π)), text="(b)", color=:white, align=(:right, :bottom)) 
+text!(ax1, Point{2,Float64}(0.95,0.85*sqrt(π)), text="B", color=:white, align=(:right, :bottom), fontsize=24) 
 Colorbar(g1[1,4], limits=clim, label=L"\tilde{C}(x)")
 
 
@@ -106,7 +106,7 @@ Label(g2[1,1,Bottom()], L"\nu")
 Label(g2[1,1,Left()], L"\tilde{M}", rotation=π/2)
 ax2.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
 ax2.yticks = (0.0:50.0:50.0, [L"0.0", L"50.0"])    
-text!(ax2, Point{2,Float64}(0.95,0.9*50.0), text="(c)", color=:black, align=(:right, :bottom)) 
+text!(ax2, Point{2,Float64}(0.95,0.85*50.0), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
 text!(ax2, Point{2,Float64}(0.05, 0.85*50.0), text = times[1], color=:red) 
 text!(ax2, Point{2,Float64}(0.35, 0.45*50.0), text = times[2], color=:green) 
 text!(ax2, Point{2,Float64}(0.7, 0.3*50.0), text = times[3], color=:blue) 

@@ -226,7 +226,7 @@ ax1.ylabel = L"\tilde{C}"
 # Label(g1[1, 1, Left()], L"\tilde{C}", rotation=π/2)
 ax1.yticks = (0.0:20.0:20.0, [L"0.0", L"20.0"])
 ax1.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-text!(ax1, Point{2,Float64}(0.95,0.9*20.0), text="(a)", color=:black, align=(:right, :bottom)) 
+text!(ax1, Point{2,Float64}(0.95,0.9*20.0), text="A", color=:black, align=(:right, :bottom), fontsize=24) 
 text!(ax1, Point{2,Float64}(0.05, 0.9*20.0), text = L"t=%$(allTs_ax1[1])", color=:red) 
 text!(ax1, Point{2,Float64}(0.35, 0.4*20.0), text = L"t=%$(allTs_ax1[2])", color=:green) 
 text!(ax1, Point{2,Float64}(0.7, 0.3*20.0), text = L"t=%$(allTs_ax1[3])", color=:blue) 
@@ -255,7 +255,7 @@ tEndString = @sprintf("%.2f", sol1.t[end+stoppoint])
 ax2.xticks = ([0.0, sol1.t[ind], sol1.t[end+stoppoint]], [L"0.0", L"\tilde{T}_{r50}", L"%$(tEndString)"])
 ax2.xlabel = L"\tilde{t}"
 ax2.ylabel = L"\tilde{M}_\phi"
-text!(ax2, Point{2,Float64}(0.95*0.29,0.9*π), text="(b)", color=:black, align=(:right, :bottom)) 
+text!(ax2, Point{2,Float64}(0.95*0.29,0.9*π), text="B", color=:black, align=(:right, :bottom), fontsize=24) 
 
 # ax2 = Axis(g1[1,2], yticks = (0.0:π/2.0:π, [L"0", L"π/2", L"π"]))
 # Label(g1[2,2, Top()], "(b)")
@@ -309,7 +309,7 @@ ylims!(ax3, (0.0, 1.1*maximum(𝒫analytic)))
 ax3.xlabel = L"h_0"
 ax3.ylabel = L"𝓟^*_{50}/10^{-4}"
 
-text!(ax3, Point{2,Float64}(0.9*1.05*hcutoff, 0.9*1.1*maximum(𝒫analytic)), text="(c)", color=:black, align=(:right, :bottom)) 
+text!(ax3, Point{2,Float64}(0.9*1.05*hcutoff, 0.9*1.1*maximum(𝒫analytic)), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
 
 colsize!(g2, 1, Aspect(1, 1.5))
 resize_to_layout!(fig)

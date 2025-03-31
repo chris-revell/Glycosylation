@@ -60,7 +60,7 @@ fig = Figure(size=(1000,1000), fontsize=18)
 xMax = sqrt(π)
 xs = collect(range(0.0, xMax, p1.dims[2]))
 
-letterArray = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)", "(j)", "(k)", "(l)", "(m)", "(n)", "(o)", "(p)"]
+letterArray = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
 
 axesVec = [Axis(fig[1,1])]
 lines!(axesVec[1], mat_h1[1,:], xs)
@@ -69,7 +69,7 @@ ylims!(axesVec[1], (0.0, xMax))
 # axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
 axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
 axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.6), text=popfirst!(letterArray), color=:black, align=(:right, :bottom)) 
+text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 for x=2:4
     uInternal = reshape(sol1.u[frames[x-1]], p1.dims...)
     push!(axesVec, Axis(fig[1,x]))
@@ -77,7 +77,7 @@ for x=2:4
     # Label(fig[1,x, Top()], L"\tilde{t} = %$tString")
     # Label(fig[1,x,Bottom()], popfirst!(letterArray))
     heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
-    text!(axesVec[end], Point{2,Float64}(0.95,1.6), text=popfirst!(letterArray), color=:white, align=(:right, :bottom)) 
+    text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
 end
 
 for x=2:4  
@@ -85,7 +85,7 @@ for x=2:4
     # Label(fig[2,x,Bottom()], popfirst!(letterArray))
     M = M̃(sol1.u[frames[x-1]], p1.W, p1.dims, p1.dν, p1.hᵥ)[:,1]
     lines!(axesVec[end], νs, M)
-    text!(axesVec[end], Point{2,Float64}(0.95,(1.6/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom)) 
+    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
 
 push!(axesVec, Axis(fig[3,1]))
@@ -95,13 +95,13 @@ xlims!(axesVec[end], (0.0, 1.2*maximum(p2.matFₑ)))
 ylims!(axesVec[end], (0.0, xMax))
 axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
 axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.6), text=popfirst!(letterArray), color=:black, align=(:right, :bottom)) 
+text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 for x=2:4
     uInternal = reshape(sol2.u[frames[x-1]], p2.dims...)
     push!(axesVec, Axis(fig[3,x]))
     # Label(fig[6,x,Top()], popfirst!(letterArray))
     heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
-    text!(axesVec[end], Point{2,Float64}(0.95,1.6), text=popfirst!(letterArray), color=:white, align=(:right, :bottom)) 
+    text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
 end
 
 for x=2:4
@@ -109,7 +109,7 @@ for x=2:4
     # Label(fig[8,x,Top()], popfirst!(letterArray))
     M = M̃(sol2.u[frames[x-1]], p2.W, p2.dims, p2.dν, p2.hᵥ)[:,1]
     lines!(axesVec[end], νs, M)
-    text!(axesVec[end], Point{2,Float64}(0.95,(1.6/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom)) 
+    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
 
 # axesVec[1].xlabel = L"h"
