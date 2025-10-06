@@ -112,9 +112,9 @@ function conditionHalfProduction(u, t, integrator)
 end
 
 function conditionNuWall(u, t, integrator)
-    # uInternal = reshape(u, integrator.p.dims...)
-    # findmax(uInternal)[2].I[1] > 0.8*integrator.p.dims[1] ? true : false
-    findmax(M̃(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ))[2].I[1] > 0.9*integrator.p.dims[1] ? true : false
+    uInternal = reshape(u, integrator.p.dims...)
+    findmax(uInternal)[2][1] == integrator.p.dims[1] ? true : false
+    # findmax(M̃(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ))[2].I[1] > 0.9*integrator.p.dims[1] ? true : false
 end
 
 affectTerminate!(integrator) = terminate!(integrator, ReturnCode.Success)    

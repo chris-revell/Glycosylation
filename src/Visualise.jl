@@ -46,12 +46,16 @@ function concentrationSurfaceMovie(solu, dims; subFolder="", folderName="")
     ax.zlabel = L"\tilde{C}(x_\perp, \nu)"
     uInternal = Observable(zeros(dims...))
     globalmin = minimum([minimum(u) for u in solu])
-    globalmax = maximum([maximum(u) for u in solu])
-    zlims!(ax, (globalmin, globalmax))
-    clims = (globalmin,globalmax)
+    # globalmax = maximum([maximum(u) for u in solu])
+    midpointmax = maximum(solu[length(solu)÷4])
+    # zlims!(ax, (globalmin, globalmax))
+    zlims!(ax, (globalmin, midpointmax))
+    clims = (globalmin,midpointmax)
     # hidedecorations!(ax)
     νs = collect(range(0,1,dims[1]))
     xs = collect(range(0,sqrt(π),dims[2]))
+    ax.xticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
+    ax.yticks = (0.0:0.5:1.0, [L"0.0", L"0.5", L"1.0"]) # L"\sqrt{\pi}"])
     surface!(ax, νs, xs, uInternal, colorrange=clims, colormap=:batlow)
     record(fig, datadir("sims",subFolder,folderName,"concentrationSurfaceMovie.mp4"), 1:length(solu); framerate=10) do i
         uInternal[] .= reshape(solu[i], dims...)
@@ -94,7 +98,8 @@ function M̃movie(solu, p; subFolder="", folderName="")
         push!(maxima, maximum(M))
     end
     globalmin = minimum(minima)
-    globalmax = maximum(maxima)
+    # globalmax = maximum(maxima)
+    midpointmax = maxima[length(maxima)÷4]
 
     fig = Figure()#size=(500,500))
     ax = CairoMakie.Axis(fig[1, 1], aspect=1)
@@ -103,7 +108,8 @@ function M̃movie(solu, p; subFolder="", folderName="")
     # ax.title = "Integral of Cₛ over space against ν"
     M = Observable(zeros(dims[1]))
     lines!(ax, collect(range(0.0,1.0,dims[1])), M, linewidth=4)
-    ylims!(ax, (globalmin, globalmax))
+    # ylims!(ax, (globalmin, globalmax))
+    ylims!(ax, (globalmin, midpointmax))
     record(fig, datadir("sims",subFolder, folderName, "Mtildemovie.mp4"), 1:length(solu); framerate=10) do i
         M[] .= M̃(solu[i], W, dims, dν, hᵥ)
         M[] = M[]

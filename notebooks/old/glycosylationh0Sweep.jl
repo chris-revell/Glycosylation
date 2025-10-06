@@ -33,7 +33,7 @@ h_S = 2*k_Sa/k_Sd
 hMax = h_C*5
 hMin = h_C/10
 h₀s = collect(hMin:2*hMin:hMax)
-Ωs = h₀s.*Ωperp      # Dimensional lumen volume 
+Ωs = h₀s.*𝒜      # Dimensional lumen volume 
 
 #%%
 
@@ -49,7 +49,7 @@ ps = []
 α_Cs = []
 for i=1:length(h₀s)
     @show h₀s[i]    
-    derivedParams = derivedParameters(Ωs[i], Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
+    derivedParams = derivedParameters(Ωs[i], 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
     @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
     
     sol, p = glycosylationAnyD(dims, K₂, K₄, 1000.0, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction", saveIntermediate=false)
@@ -64,9 +64,9 @@ for i=1:length(h₀s)
     push!(Tᵣ₅₀s, Tᵣ₅₀)
     push!(Tᵣ₅₀Stars, Tᵣ₅₀Star)
     push!(MstarsPhiSim, Mstarϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, 𝒞, ϕ))
-    push!(PstarsSim50, 𝒫star₅₀Numeric(k₁, k₂, k₃, 𝒞, ℰ, 𝒮, h₀, k_Ca, k_Cd, k_Sa, k_Sd, Ωperp, T̃ᵣ₅₀))
+    push!(PstarsSim50, 𝒫star₅₀Numeric(k₁, k₂, k₃, 𝒞, ℰ, 𝒮, h₀, k_Ca, k_Cd, k_Sa, k_Sd, 𝒜, T̃ᵣ₅₀))
     push!(PstarsSim, Mstarϕ(sol.u[end], p.W, p.dims, p.dν, p.hᵥ, α_C, 𝒞, ϕ)/Tᵣ₅₀Star)
-    push!(PstarsAnalytic, 𝒫star₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, Ωperp, 𝒮, 𝒞, ℰ, N, ϕ))
+    push!(PstarsAnalytic, 𝒫star₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, 𝒜, 𝒮, 𝒞, ℰ, N, ϕ))
 end
 
 #%%

@@ -5,7 +5,7 @@ using FromFile
 
 h₀ = 0.1
 
-Ωperp = 100.0  # Lumen footprint area
+𝒜 = 100.0  # Lumen footprint area
 N     = 100         # Maximum polymer length 
 k_Cd  = 200.0 # Complex desorption rate
 k_Ca  = 2.0 # Complex adsorption rate
@@ -23,4 +23,4 @@ D_S   = 0.01  # Substrate diffusivity
 Tᵣstar= 5000.0  # Release time
 ϕ     = 0.5
 
-params = derivedParameters(h₀, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝒞, 𝓢, D_C, D_S, Tᵣstar; checks=true)
+params = derivedParameters(h₀, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, E_0, 𝒞, 𝓢, D_C, D_S, Tᵣstar; checks=true)

@@ -47,7 +47,7 @@ mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(p2.dims)], p2.dims...)
 
 #%%
 
-derivedParams = derivedParameters(rawParams1.Ω, rawParams1.Ωperp, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
+derivedParams = derivedParameters(rawParams1.Ω, rawParams1.𝒜, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 #%%

@@ -1,34 +1,34 @@
 
 module DerivedParameters
 
-function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+function derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
 
-    L₀   = sqrt(Ωperp/π)       # Dimensional mean cyclindrical radius of cisterna 
-    # ℰ    = 2*Ωperp*E₀        # Dimensional total enzyme mass
-    E₀  = ℰ/(2*Ωperp)           # Dimensional mean enzyme concentration
-    # Ω    = h₀*Ωperp           # Dimensional lumen volume
-    h₀   = Ω/Ωperp             # Dimensional mean lumen thickness
+    L₀   = sqrt(𝒜/π)       # Dimensional mean cyclindrical radius of cisterna 
+    # ℰ    = 2*𝒜*E₀        # Dimensional total enzyme mass
+    E₀  = ℰ/(2*𝒜)           # Dimensional mean enzyme concentration
+    # Ω    = h₀*𝒜           # Dimensional lumen volume
+    h₀   = Ω/𝒜             # Dimensional mean lumen thickness
     C_b  = 𝒞/Ω                 # Dimensional initial bulk monomeric cargo concentration
     S_b  = 𝒮/Ω                 # Dimensional initial bulk substrate concentration
     
     δ_C  = π*D_C/(k₁*ℰ)  # Dimensionless diffusivity
     δ_S  = π*D_S/(k₁*ℰ)  # Dimensionless diffusivity
 
-    α_C  = (k_Cd*Ω)/(2*k_Ca*Ωperp) # Dimensionless complex capacitance
-    α_S  = (k_Sd*Ω)/(2*k_Sa*Ωperp) # Dimensionless substrate capacitance    
+    α_C  = (k_Cd*Ω)/(2*k_Ca*𝒜) # Dimensionless complex capacitance
+    α_S  = (k_Sd*Ω)/(2*k_Sa*𝒜) # Dimensionless substrate capacitance    
 
-    C₀   = 𝒞/(2*Ωperp*(1+α_C))  # Dimensional Early surface monomer concentration
-    S₀   = 𝒮/(2*Ωperp*(1+α_S))  # Dimensional Early surface substrate concentration 
+    C₀   = 𝒞/(2*𝒜*(1+α_C))  # Dimensional Early surface monomer concentration
+    S₀   = 𝒮/(2*𝒜*(1+α_S))  # Dimensional Early surface substrate concentration 
     
-    Tᵣ   = k₁*ℰ*Tᵣstar/(2*Ωperp)   # Dimensionless release time 
+    Tᵣ   = k₁*ℰ*Tᵣstar/(2*𝒜)   # Dimensionless release time 
     
-    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*Ωperp + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
+    K₂   = (k₂/(k₁*C_b))*((2*k_Ca*𝒜 + k_Cd*Ω)/(k_Ca*Ω)) # Dimensionless complex formation net reaction rate
     K₃   = k₃/k₁                                            # Dimensionless product formation rate
     K₄   = k₄/k₁                                            # Dimensionless prodict dissociation rate
-    # σ    = (k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω))
+    # σ    = (k_Sa*S_b*(2*k_Ca*𝒜 + k_Cd*Ω)) / (k_Ca*C_b*(2*k_Sa*𝒜 + k_Sd*Ω))
     σ    = S₀/C₀                                            # Dimensionless substrate/cargo concentration on surface
     # σ    = 𝒮*(1+α_C)/(𝒞*(1+α_S))
-    # ϵ    = ℰ*(2*k_Ca*Ωperp + k_Cd*Ω) / (2*k_Ca*C_b*Ω*Ωperp)
+    # ϵ    = ℰ*(2*k_Ca*𝒜 + k_Cd*Ω) / (2*k_Ca*C_b*Ω*𝒜)
     ϵ    = E₀/C₀                                            # Dimensionless enzyme/cargo concentration on surface 
     # ϵ    = ℰ*(1+α_C)/𝒞
     𝒟    = α_C*δ_C*N^2*(K₂ + σ*K₃)    # Dimensionless parameter on diffusion term, derived from combination of other terms
@@ -43,23 +43,23 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
 
     u = h₀/h_C
     λ = h_C/h_S
-    ζ = (2*k₂*Ωperp)/(k₃*𝒮)
-    γ = (2*k₂*Ωperp)/(k₁*𝒞)
-    Δ = 2*k₂*k₄*Ωperp/(k₁*k₃*𝒮)
+    ζ = (2*k₂*𝒜)/(k₃*𝒮)
+    γ = (2*k₂*𝒜)/(k₁*𝒞)
+    Δ = 2*k₂*k₄*𝒜/(k₁*k₃*𝒮)
     F = (u*(1-Δ*(1+λ*u)))/((1+u)*(1+ζ*(1+λ*u)*(1+u+(1/γ))))
 
     if checks 
         println("Small aspect ratio: Ω² << Ω⟂³min(1, D_C/k₁ℰ, D_S/k₁ℰ)")
-        println("Ω² = $(Ω^2), Ω⟂³min(1, D_C/k₁ℰ, D_S/k₁ℰ) = $((Ωperp^3)*minimum([1.0, D_C/(k₁*ℰ), D_S/(k₁*ℰ)]))")
-        printstyled("$(Ω^2 < (Ωperp^3)*minimum([1.0, D_C/(k₁*ℰ), D_S/(k₁*ℰ)]))"; 
-            color = (Ω^2 < (Ωperp^3)*minimum([1.0, D_C/(k₁*ℰ), D_S/(k₁*ℰ)]) ? :green : :red))
+        println("Ω² = $(Ω^2), Ω⟂³min(1, D_C/k₁ℰ, D_S/k₁ℰ) = $((𝒜^3)*minimum([1.0, D_C/(k₁*ℰ), D_S/(k₁*ℰ)]))")
+        printstyled("$(Ω^2 < (𝒜^3)*minimum([1.0, D_C/(k₁*ℰ), D_S/(k₁*ℰ)]))"; 
+            color = (Ω^2 < (𝒜^3)*minimum([1.0, D_C/(k₁*ℰ), D_S/(k₁*ℰ)]) ? :green : :red))
         println("")
 
-        println("Strong exchange kinetics: D_C*Ωperp << k_Ca*Ω, D_S*Ωperp << k_Sa*Ω") 
-        println("D_C*Ωperp = $(D_C*Ωperp), k_Ca*Ω = $(k_Ca*Ω)")
-        println("D_S*Ωperp = $(D_S*Ωperp), k_Sa*Ω = $(k_Sa*Ω)")
-        printstyled("$(D_C*Ωperp<k_Ca*Ω) "; color = (D_C*Ωperp<k_Ca*Ω ? :green : :red))
-        printstyled("$(D_S*Ωperp<k_Sa*Ω)"; color = (D_S*Ωperp<k_Sa*Ω ? :green : :red))
+        println("Strong exchange kinetics: D_C*𝒜 << k_Ca*Ω, D_S*𝒜 << k_Sa*Ω") 
+        println("D_C*𝒜 = $(D_C*𝒜), k_Ca*Ω = $(k_Ca*Ω)")
+        println("D_S*𝒜 = $(D_S*𝒜), k_Sa*Ω = $(k_Sa*Ω)")
+        printstyled("$(D_C*𝒜<k_Ca*Ω) "; color = (D_C*𝒜<k_Ca*Ω ? :green : :red))
+        printstyled("$(D_S*𝒜<k_Sa*Ω)"; color = (D_S*𝒜<k_Sa*Ω ? :green : :red))
         println("")
 
         println("Limited enzyme: ϵ << 1 ")
@@ -88,14 +88,14 @@ function derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k�
         printstyled("$(isapprox(k₄, k₁, rtol = 0.05))"; color = (isapprox(k₄, k₁, rtol = 0.05) ? :green : :red))
         println("")
 
-        println("Balanced production: k₁*k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω) ∼ k₃*k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω) ")
-        println("k₁*k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω) = $(k₁*k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω)), k₃*k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω) = $(k₃*k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω))")
-        printstyled("$(isapprox(k₁*k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω), k₃*k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω), rtol = 0.05))"; color = (isapprox(k₁*k_Ca*C_b*(2*k_Sa*Ωperp + k_Sd*Ω), k₃*k_Sa*S_b*(2*k_Ca*Ωperp + k_Cd*Ω), rtol = 0.1) ? :green : :red))
+        println("Balanced production: k₁*k_Ca*C_b*(2*k_Sa*𝒜 + k_Sd*Ω) ∼ k₃*k_Sa*S_b*(2*k_Ca*𝒜 + k_Cd*Ω) ")
+        println("k₁*k_Ca*C_b*(2*k_Sa*𝒜 + k_Sd*Ω) = $(k₁*k_Ca*C_b*(2*k_Sa*𝒜 + k_Sd*Ω)), k₃*k_Sa*S_b*(2*k_Ca*𝒜 + k_Cd*Ω) = $(k₃*k_Sa*S_b*(2*k_Ca*𝒜 + k_Cd*Ω))")
+        printstyled("$(isapprox(k₁*k_Ca*C_b*(2*k_Sa*𝒜 + k_Sd*Ω), k₃*k_Sa*S_b*(2*k_Ca*𝒜 + k_Cd*Ω), rtol = 0.05))"; color = (isapprox(k₁*k_Ca*C_b*(2*k_Sa*𝒜 + k_Sd*Ω), k₃*k_Sa*S_b*(2*k_Ca*𝒜 + k_Cd*Ω), rtol = 0.1) ? :green : :red))
         println("")
 
-        println("Adequate adsorbed substrate: 2k₂k₄k_SaΩperp < (S_bk₁k₃k_Sa - k₂k₄k_Sd)Ω") 
-        println("2k₂k₄k_SaΩperp = $(2*k₂*k₄*k_Sa*Ωperp), (S_bk₁k₃k_Sa - k₂k₄k_Sd)Ω=$((S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω)")
-        printstyled("$(2*k₂*k₄*k_Sa*Ωperp < (S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω)"; color = (2*k₂*k₄*k_Sa*Ωperp < (S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω ? :green : :red))
+        println("Adequate adsorbed substrate: 2k₂k₄k_Sa𝒜 < (S_bk₁k₃k_Sa - k₂k₄k_Sd)Ω") 
+        println("2k₂k₄k_Sa𝒜 = $(2*k₂*k₄*k_Sa*𝒜), (S_bk₁k₃k_Sa - k₂k₄k_Sd)Ω=$((S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω)")
+        printstyled("$(2*k₂*k₄*k_Sa*𝒜 < (S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω)"; color = (2*k₂*k₄*k_Sa*𝒜 < (S_b*k₁*k₃*k_Sa - k₂*k₄*k_Sd)*Ω ? :green : :red))
         println("")
 
         println("σK₃ ∼ K₄ ∼ 1")
@@ -115,7 +115,7 @@ end
 
 
 
-# λ = (𝒮/(2*Ωperp))*(k₁*k₃/(k₂*k₄))
+# λ = (𝒮/(2*𝒜))*(k₁*k₃/(k₂*k₄))
 # println("λ > 1")
 # println("λ = $(λ)")
 # printstyled("$(λ>1)"; color = (λ>1) ? :green : :red)

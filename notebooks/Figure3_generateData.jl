@@ -45,7 +45,7 @@ rawParams1 = (
     Ngrid = Ngrid,
     dims = dims,
     h₀ = h₀,
-    Ωperp = Ωperp,
+    𝒜 = 𝒜,
     Ω = Ω,
     N = N,
     k_Cd = k_Cd,
@@ -74,7 +74,7 @@ rawParams2 = (
     Ngrid = Ngrid,
     dims = dims,
     h₀ = h₀,
-    Ωperp = Ωperp,
+    𝒜 = 𝒜,
     Ω = Ω,
     N = N,
     k_Cd = k_Cd,
@@ -96,7 +96,7 @@ rawParams2 = (
 
 #%%
 
-derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 #%%

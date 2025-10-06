@@ -1,28 +1,28 @@
 # For figure 3:
 h₀ = 1.0
-Ωperp = 10000    # Dimensional lumen footprint area
-Ω     = h₀*Ωperp      # Dimensional lumen volume 
+𝒜 = 10000    # Dimensional lumen footprint area
+Ω     = h₀*𝒜      # Dimensional lumen volume 
 N     = 100     # Maximum polymer length 
 k_Sa  = 1.0 # Substrate adsorption rate
 k_Sd  = 1.0 # Substrate desorption rate
-k_Ca  = 0.1 # Complex adsorption rate
+k_Ca  = 0.05#1 # Complex adsorption rate
 k_Cd  = 1.0 # Complex desorption rate
 k₁    = 1.0   # Complex formation forward reaction rate 
 k₂    = 0.025   # Complex dissociation reverse reaction rate 
 k₃    = 0.025   # Product formation
-k₄    = 1.0  # Product dissociation 
+k₄    = 2.0  # Product dissociation 
 𝒞     = 10000.0
 𝒮     = 100000.0
 ℰ     = 1.0
 D_C   = 0.001   # Monomer/polymer diffusivity
 D_S   = 0.001   # Substrate diffusivity
-Tᵣstar= 100000000.0  # Release time
+Tᵣstar= 1000000000.0  # Release time
 ϕ     = 0.5
 
 # For figure 2:
 # h₀ = 1.0
-# Ωperp = 10000    # Dimensional lumen footprint area
-# Ω     = h₀*Ωperp      # Dimensional lumen volume 
+# 𝒜 = 10000    # Dimensional lumen footprint area
+# Ω     = h₀*𝒜      # Dimensional lumen volume 
 # N     = 100     # Maximum polymer length 
 # k_Sa  = 0.1 # Substrate adsorption rate
 # k_Sd  = 0.6 # Substrate desorption rate
@@ -43,7 +43,7 @@ Tᵣstar= 100000000.0  # Release time
 # using FromFile
 # @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 # println(""); println(""); println("")
-# derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+# derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
 # @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 # @show T₀ = 1/(k₁*E₀)
@@ -54,5 +54,5 @@ Tᵣstar= 100000000.0  # Release time
 # @show D_S/(h₀*k_Sa)
 # @show D_C/(h₀*k_Ca)
 # @show S_b*k₁*k₃*k_Sa/(k₂*k₄*k_Sd)
-# hcutoff = (2.0*k_Sa/k_Sd)*((𝒮*k₁*k₃)/(2.0*Ωperp*k₂*k₄) - 1.0)
+# hcutoff = (2.0*k_Sa/k_Sd)*((𝒮*k₁*k₃)/(2.0*𝒜*k₂*k₄) - 1.0)
 # @show hcutoff

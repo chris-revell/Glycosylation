@@ -22,16 +22,16 @@ using JLD2
 
 #%%
 
-subFolder = "Figure4"
+subFolder = "keynote"
 terminateAt = "nuWall"
 thicknessProfile = "GRF"
 differencing = "centre"
 solver = SSPRK432()
 nOutputs = 100
 σGRF = 0.3
-λGRF = 0.2
+λGRF = 0.05
 
-nSpatialDims = 2
+nSpatialDims = 1
 Ngrid = 201
 dims = fill(Ngrid, nSpatialDims+1)
 
@@ -39,7 +39,7 @@ include(projectdir("notebooks", "paramsRaw.jl"))
 
 #%%
 
-derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 #%%
@@ -68,7 +68,7 @@ rawParams = (
     Ngrid = Ngrid,
     dims = dims,
     h₀ = h₀,
-    Ωperp = Ωperp,
+    𝒜 = 𝒜,
     Ω = Ω,
     N = N,
     k_Cd = k_Cd,
@@ -100,11 +100,11 @@ if nSpatialDims==1
         thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
     end
 else    
-    uSlices = [selectdim(reshape(u, dims...), 3, dims[3]÷2) for u in sol.u]
-    uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
+    uSlices = [selectdim(reshape(u, dims...), 3, dims[3]÷2) for u in sol.u[1:35]]
+    uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices[1:35]]
     concentrationSurfaceMovie(uSlicesReshaped, dims[1:2]; subFolder=subFolder, folderName=folderName)
     # concentrationHeatmapMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
-    M̃movie(sol.u, p; subFolder=subFolder, folderName=folderName)
+    M̃movie(sol.u[1:50], p; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
         thicknessPlot(p.hᵥ, dims; subFolder=subFolder, folderName=folderName)
     end

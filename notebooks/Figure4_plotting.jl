@@ -29,8 +29,8 @@ folderName = "25-02-10-12-38-54_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=cent
 data1 = load(datadir("sims", subFolder, folderName, "solution.jld2"))
 @unpack sol1, p1, sol2, p2, rawParams = data1
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
-@unpack thicknessProfile, differencing, solver, nOutputs, σGRF, λGRF, nSpatialDims, Ngrid, dims, h₀, Ωperp, Ω, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar, ϕ = rawParams
-derivedParams = derivedParameters(Ω, Ωperp, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
+@unpack thicknessProfile, differencing, solver, nOutputs, σGRF, λGRF, nSpatialDims, Ngrid, dims, h₀, 𝒜, Ω, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar, ϕ = rawParams
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 #%%
