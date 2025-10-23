@@ -1,4 +1,3 @@
-
 using OrdinaryDiffEq
 using SparseArrays
 using UnPack
@@ -9,185 +8,314 @@ using Printf
 using SciMLOperators
 using Dates
 using InvertedIndices
+using XLSX
+using DataFrames
+using Interpolations
+using Statistics
 using JLD2
-using LinearAlgebra
+using MathTeXEngine # required for texfont
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
+# @from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
+@from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
-@from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
 #%%
 
-subFolder = "Figure3"
-folderName = "25-02-17-11-45-18_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
+subFolder = "Figure2"
+folderName = "25-02-13-16-34-25"
+data1 = load(datadir("sims", subFolder, folderName, "solutions.jld2"))
+@unpack sols, ps, h₀s = data1
 
-# # thicknessProfile = "Gaussian"
-# differencing = "centre"
-# solver = SSPRK432()
-# nOutputs = 100
-# # σGRF = 0.2
-# σGaussian = 0.20
+terminateAt = "nuWall"
+thicknessProfile = "uniform"
+differencing = "centre"
+solver = SSPRK432()
+nOutputs = 1000
+σGRF = 0.2
+nSpatialDims = 1
+Ngrid = 401
+dims = fill(Ngrid, nSpatialDims+1)
 
-# nSpatialDims = 1
-# Ngrid = 401
-# dims = fill(Ngrid, nSpatialDims+1)
-
-# include(projectdir("notebooks", "paramsRaw.jl"))
-
-#%%
-
-data1 = load(datadir("sims", subFolder, folderName, "solutionHVariation.jld2"))
-@unpack sol1, p1, rawParams1 = data1
-mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
-
-data2 = load(datadir("sims", subFolder, folderName, "solutionFVariation.jld2"))
-@unpack sol2, p2, rawParams2 = data2
-mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(p2.dims)], p2.dims...)
+include(projectdir("notebooks", "paramsRaw.jl"))
 
 #%%
 
-derivedParams = derivedParameters(rawParams1.Ω, rawParams1.𝒜, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
+h_C = 2*k_Ca/k_Cd
+h_S = 2*k_Sa/k_Sd
+hMax = h_C*5
+hMin = h_C/10
+Ωs = h₀s.*𝒜
+
+#%%
+
+𝒫sim = []
+𝒫analytic = [0.0]
+𝒫analyticAdjusted = [0.0]
+for i=1:length(h₀s)
+    @show h₀s[i]    
+    derivedParams = derivedParameters(Ωs[i], 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
+    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
+    # sol, p = glycosylationAnyD(dims, K₂, K₄, 1000.0, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt="halfProduction", saveIntermediate=false) 
+    Tᵣ₅₀Star = sols[i].t[end]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)
+    Tᵣ₅₀Analytic = ((N^2)*(K₂+σ*K₃)/(k₁*E₀))*T̃ᵣ₅₀Analytic(𝒞, 𝒮, ϕ, h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, 𝒜, N, 0.0, 0.0)
+    push!(𝒫sim, Mstarϕ(sols[i].u[end], ps[i].W, ps[i].dims, ps[i].dν, ps[i].hᵥ, α_C, 𝒞, ϕ)/Tᵣ₅₀Star)
+    # push!(𝒫analytic, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀Analytic )
+    push!(𝒫analytic, 𝒫star₅₀Analytic(h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, 𝒜, 𝒮, 𝒞, ℰ, N, ϕ) )
+
+    midpoint = length(sols[i].u)
+    C_peak, ind_peak = findmax(reshape(sols[i].u[midpoint], ps[i].dims...)[:,1])
+    νs   = collect(range(0.0, 1.0, ps[i].dims[1]))
+    ν_peak = νs[ind_peak]
+    Ẽ = ps[i].K₂/(1+ps[i].K₂)
+    D = Ẽ*ps[i].K₂*K₄/(1+α_C)
+    t̃₀ = sols[i].t[midpoint] - 1/(4.0*π*D*C_peak^2)
+    ν₀ = ν_peak - Ẽ*β*(sols[i].t[midpoint]-t̃₀)/(1+α_C)
+    Tᵣ₅₀AnalyticAdjusted = ((N^2)*(K₂+σ*K₃)/(k₁*E₀))*T̃ᵣ₅₀Analytic(𝒞, 𝒮, ϕ, h₀s[i], h_C, h_S, k₁, k₂, k₃, k₄, 𝒜, N, ν₀, t̃₀)
+    push!(𝒫analyticAdjusted, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀AnalyticAdjusted )
+end
+
+hcutoff = (2.0*k_Sa/k_Sd)*((𝒮*k₁*k₃)/(2.0*𝒜*k₂*k₄) - 1.0)
+for h₀cut in [hcutoff]
+    derivedParams = derivedParameters(𝒜*h₀cut, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
+    @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
+
+    # midpoint = length(sol1.u)
+    # C_peak, ind_peak = findmax(reshape(sol1.u[midpoint], p1.dims...)[:,1])
+    # νs   = collect(range(0.0, 1.0, p1.dims[1]))
+    # ν_peak = νs[ind_peak]
+    # Ẽ = p1.K₂/(1+p1.K₂)
+    # D = Ẽ*p1.K₂*K₄/(1+α_C)
+    # t̃₀ = sol1.t[midpoint] - 1/(4.0*π*D*C_peak^2)
+    # ν₀ = ν_peak - Ẽ*β*(sol1.t[midpoint]-t̃₀)/(1+α_C)
+    
+    Tᵣ₅₀Analytic = ((N^2)*(K₂+σ*K₃)/(k₁*E₀))*T̃ᵣ₅₀Analytic(𝒞, 𝒮, ϕ, h₀cut, h_C, h_S, k₁, k₂, k₃, k₄, 𝒜, N, 0.0, 0.0)
+    # push!(𝒫analytic, (α_C*𝒞/(π*(1+α_C)))*(π/2)/Tᵣ₅₀Analytic )
+    push!(𝒫analytic, 𝒫star₅₀Analytic(h₀cut, h_C, h_S, k₁, k₂, k₃, k₄, 𝒜, 𝒮, 𝒞, ℰ, N, ϕ) )
+    push!(𝒫analyticAdjusted, 0.0 )
+end
+
+#%%
+
+𝒜 = 10000
+h₀ = 1.0
+Ω = 𝒜*h₀
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
+sol1, p1 = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ*3, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt=terminateAt)
+println("finished sim")
+
 #%%
 
-outLength = min(length(sol1.t), length(sol2.t))-5
-frames = collect(1:outLength÷2-1:outLength)
-fig = Figure(size=(1000,1000), fontsize=18)
+stoppoint = -20
 
-νs = collect(range(0.0, 1.0, p1.dims[1]))
-xMax = sqrt(π)
-xs = collect(range(0.0, xMax, p1.dims[2]))
+midpoint = (length(sol1.u)+stoppoint)÷2
+C_peak, ind_peak = findmax(reshape(sol1.u[midpoint], p1.dims...)[:,dims[2]÷2])
+νs   = collect(range(0.0, 1.0, p1.dims[1]))
+ν_peak = νs[ind_peak]
+Ẽ = p1.K₂/(1+p1.K₂)
+D = Ẽ*p1.K₂*K₄/(1+α_C)
+t̃₀ = sol1.t[midpoint] - 1/(4.0*π*D*C_peak^2)
+ν₀ = ν_peak - Ẽ*β*(sol1.t[midpoint]-t̃₀)/(1+α_C)
+νsOffset = νs.-ν₀
+tsOffset = sol1.t.-t̃₀
+firstPositivetIndex = findfirst(x->x>0, tsOffset)
 
-letterArray = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
+midpoint = length(sol1.u)÷2
+C_peak, ind_peak = findmax(reshape(sol1.u[midpoint], p1.dims...)[:,1])
+νs   = collect(range(0.0, 1.0, p1.dims[1]))
+ν_peak = νs[ind_peak]
+Ẽ = p1.K₂/(1+p1.K₂)
+D = Ẽ*p1.K₂*K₄/(1+α_C)
 
-axesVec = [Axis(fig[1,1])]
-lines!(axesVec[1], mat_h1[1,:], xs)
-xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h1[1,:])))
-ylims!(axesVec[1], (0.0, xMax))
-# axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
-for x=2:4
-    uInternal = reshape(sol1.u[frames[x-1]], p1.dims...)
-    push!(axesVec, Axis(fig[1,x]))
-    # tString = @sprintf("%.3f", sol2.t[frames[x-1]])
-    # Label(fig[1,x, Top()], L"\tilde{t} = %$tString")
-    # Label(fig[1,x,Bottom()], popfirst!(letterArray))
-    heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
-    text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
+t̃₀ = sol1.t[midpoint] - 1/(4.0*π*D*C_peak^2)
+ν₀ = ν_peak - Ẽ*β*(sol1.t[midpoint]-t̃₀)/(1+α_C)
+νsOffset = νs.-ν₀
+tsOffset = sol1.t.-t̃₀
+firstPositivetIndex = findfirst(x->x>0, tsOffset)
+
+midpoint = (length(sol1.u)+stoppoint)÷2
+C_peak, ind_peak = findmax(reshape(sol1.u[midpoint], p1.dims...)[:,1])
+νs   = collect(range(0.0, 1.0, p1.dims[1]))
+ν_peak = νs[ind_peak]
+Ẽ = p1.K₂/(1+p1.K₂)
+D = Ẽ*p1.K₂*K₄/(1+α_C)
+
+t̃₀ = sol1.t[midpoint] - 1/(4.0*π*D*C_peak^2)
+ν₀ = ν_peak - Ẽ*β*(sol1.t[midpoint]-t̃₀)/(1+α_C)
+νsOffset = νs.-ν₀
+tsOffset = sol1.t.-t̃₀
+firstPositivetIndex = findfirst(x->x>0, tsOffset)
+
+# fig = Figure(size=(1000,1000), fontsize=32)
+# ax1 = CairoMakie.Axis(fig[1, 1])
+# ax1.xlabel = L"\nu"
+# ax1.ylabel = L"\tilde{C}"
+# analyticLine = Observable(zeros(dims[1]))
+# numericLine = Observable(zeros(dims[1]))
+# l1 = lines!(ax1, νs, analyticLine, color=(:red, 0.75), linewidth=4)
+# l2 = lines!(ax1, νs, numericLine, color=(:blue, 0.75), linewidth=4, linestyle=:dot)
+# Legend(fig[1,2], [l1, l2], ["Asymptotic", "Numeric"])
+# ylims!(ax1, (-2.0, maximum(sol1.u[1])))
+# xlims!(ax1, (0.0, 1.0))
+# # analyticVals = zeros(size(νsOffset)) 
+
+# ax2 = CairoMakie.Axis(fig[2, 1])#, aspect=1)
+# ax2.xlabel = L"\tilde{t}"
+# ax2.ylabel = L"\tilde{M}_\phi"
+# xlims!(ax2, (0.0, sol1.t[end]))
+# ylims!(ax2, (0.0, 1.05*π))
+# nFrames = 101
+# analyticMs = Observable(zeros(nFrames))
+# numericMs = Observable(zeros(nFrames))
+# # Ms3 = Observable(zeros(nFrames))
+# Ts = Observable(zeros(nFrames))
+# allLines = [ lines!(ax2, Ts, analyticMs, color=(:red, 0.75), linewidth=4), 
+#                 lines!(ax2, Ts, numericMs, color=(:blue, 0.75), linewidth=4, linestyle=:dot) ]
+# allLabels = ["Asymptotic", "Numeric"]
+# # l5 = lines!(ax2, Ts, Ms3, color=(:green, 0.75), linewidth=4, linestyle=:dot)
+# Legend(fig[2,2], allLines, allLabels)
+# record(fig, datadir("sims",subFolder, folderName, "analyticCs2.mp4"), 1:length(sol1.t)÷nFrames; framerate=10) do i
+#     if tsOffset[i] > 0
+#         # analyticVals .= homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[(i-1)*nFrames+1])
+#         analyticLine[] .= homogeneousWidthC.(νsOffset, K₂, K₄, α_C, β, tsOffset[(i-1)*nFrames+1]) # analyticVals
+#         uInternal = reshape(sol1.u[(i-1)*nFrames+1], dims...)
+#         numericLine[] .= uInternal[:,dims[2]÷2]
+#         analyticLine[] = analyticLine[]
+#         numericLine[] = numericLine[]
+
+#         Ts[][i] = sol1.t[(i-1)*nFrames+1]
+#         Ts[] = Ts[]
+#         analyticMs[][i] = M̃ϕAnalytic(ϕ, ν₀, sol1.t[(i-1)*nFrames+1]-t̃₀, α_C, β, p1.K₂, K₄)
+#         numericMs[][i] = M̃ϕ(sol1.u[(i-1)*nFrames+1], p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ) 
+#         analyticMs[] = analyticMs[]
+#         numericMs[] = numericMs[]
+#     end
+# end
+
+
+#%%
+
+fig = Figure(size=(1000,800), fontsize=18, figure_padding=25)
+
+g1 = GridLayout(fig[1,1])
+g2 = GridLayout(fig[2,1])
+
+ax1 = Axis(g1[1, 1])
+# Label(g1[2,1, Top()], "(a)")
+allLines_ax1 = []
+allTs_ax1 = []
+colorsUsed = [(:red), (:green), (:blue)]
+for (c,i) in enumerate([firstPositivetIndex, (length(sol1.t)+stoppoint-firstPositivetIndex)÷2+firstPositivetIndex, length(sol1.t)+stoppoint])
+    uInternal = reshape(sol1.u[i], p1.dims...)
+    push!(allLines_ax1, lines!(ax1, νs, uInternal[:,1], linestyle=:solid, color=(colorsUsed[c], 0.5), linewidth=4))
+    push!(allLines_ax1, lines!(ax1, νs, homogeneousWidthC.(νsOffset, p1.K₂, K₄, α_C, β, tsOffset[i]), linestyle=:dot, color=(colorsUsed[c], 1.0), linewidth=4))
+    push!(allTs_ax1, @sprintf("%.2f", tsOffset[i]))
 end
-
-for x=2:4  
-    push!(axesVec, Axis(fig[2,x]))
-    # Label(fig[2,x,Bottom()], popfirst!(letterArray))
-    M = M̃(sol1.u[frames[x-1]], p1.W, p1.dims, p1.dν, p1.hᵥ)[:,1]
-    lines!(axesVec[end], νs, M)
-    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
+labels_ax1 = []
+for t in allTs_ax1
+    push!(labels_ax1, "Numeric, t=$t")
+    push!(labels_ax1, "Asymptotic, t=$t")
 end
+# axislegend(ax1, allLines_ax1, labels_ax1, labelsize = 16)
+ax1.xlabel = L"\nu"
+ax1.ylabel = L"\tilde{C}"
+# Label(g1[1, 1, Bottom()], L"\nu")
+# Label(g1[1, 1, Left()], L"\tilde{C}", rotation=π/2)
+ax1.yticks = (0.0:20.0:20.0, [L"0.0", L"20.0"])
+ax1.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+text!(ax1, Point{2,Float64}(0.95,0.9*20.0), text="A", color=:black, align=(:right, :bottom), fontsize=24) 
+text!(ax1, Point{2,Float64}(0.05, 0.9*20.0), text = L"t=%$(allTs_ax1[1])", color=:red) 
+text!(ax1, Point{2,Float64}(0.35, 0.4*20.0), text = L"t=%$(allTs_ax1[2])", color=:green) 
+text!(ax1, Point{2,Float64}(0.7, 0.3*20.0), text = L"t=%$(allTs_ax1[3])", color=:blue) 
+ylims!(ax1, (0.0, 20.0))
+xlims!(ax1, (0.0, 1.0))
 
-push!(axesVec, Axis(fig[3,1]))
-# Label(fig[6,1,Top()], popfirst!(letterArray))
-lines!(axesVec[end], p2.matFₑ, xs)
-xlims!(axesVec[end], (0.0, 1.2*maximum(p2.matFₑ)))
-ylims!(axesVec[end], (0.0, xMax))
-axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
-for x=2:4
-    uInternal = reshape(sol2.u[frames[x-1]], p2.dims...)
-    push!(axesVec, Axis(fig[3,x]))
-    # Label(fig[6,x,Top()], popfirst!(letterArray))
-    heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
-    text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
-end
 
-for x=2:4
-    push!(axesVec, Axis(fig[4,x]))
-    # Label(fig[8,x,Top()], popfirst!(letterArray))
-    M = M̃(sol2.u[frames[x-1]], p2.W, p2.dims, p2.dν, p2.hᵥ)[:,1]
-    lines!(axesVec[end], νs, M)
-    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
-end
 
-# axesVec[1].xlabel = L"h"
-# axesVec[1].ylabel = L"x"
-Label(fig[1,1,Left()], L"x")
-Label(fig[1,1,BottomRight()], L"h")
-axesVec[1].xgridvisible = false
-for ax in axesVec[2:4]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"x"
-    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-    ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])    
-    ax.xticklabelsvisible = false
-    ax.yticklabelsvisible = false
-    xlims!(ax, (0.0,1.0))
-    ylims!(ax, (0.0,xMax))
-end
-# axesVec[5].ylabel = L"\tilde{M}"
-axesVec[end].xgridvisible = false
-Label(fig[2,2,Left()], L"\tilde{M}")
-Label(fig[2,2,Bottom()], L"\nu")
-Label(fig[2,3,Bottom()], L"\nu")
-Label(fig[2,4,Bottom()], L"\nu")
 
-for ax in axesVec[5:7]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"\tilde{M}"
-    xlims!(ax, (0.0,1.0))
-    ylims!(ax, (0.0,40.0))
-    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-    ax.yticks = (0.0:40.0:40.0, [L"0.0", L"40.0"])
-    # ax.xticklabelsvisible = false
-    ax.yticklabelsvisible = false
-    ax.xgridvisible = false
-    ax.ygridvisible = false
-end
-axesVec[5].yticklabelsvisible = true
+ax2 = Axis(g1[1,2], yticks = (0.0:π/2.0:π, [L"0", L"π/2", L"π"]))
+# Label(g1[2,2, Top()], "(b)")
+ylims!(ax2, (0.0, 1.05*π))
+xlims!(ax2, (0.0, sol1.t[end+stoppoint]))
+tSeries = sol1.t[firstPositivetIndex:end+stoppoint]
+numericalMs = [M̃ϕ(u, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ, thresh="ceil") for u in sol1.u[firstPositivetIndex:end+stoppoint]]
+analyticMs = [M̃ϕAnalytic.(ϕ, ν₀, τ, α_C, β, p1.K₂, K₄) for τ in tsOffset[firstPositivetIndex:end+stoppoint]]
+allLines = [ lines!(ax2, tSeries, numericalMs, linewidth=4, color=(:red, 0.5)), 
+                lines!(ax2, tSeries, analyticMs, linewidth=4, color=(:blue, 1.0), linestyle=:dot),                 
+            ]
+allLabels = [ "Numeric",
+    "Asymptotic",
+]
+ind = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ)>=π/2.0, sol1.u)
+l5 = vlines!(ax2, sol1.t[ind], color=(:black, 0.5))#, linewidth=4
+tEndString = @sprintf("%.2f", sol1.t[end+stoppoint])
+ax2.xticks = ([0.0, sol1.t[ind], sol1.t[end+stoppoint]], [L"0.0", L"\tilde{T}_{r50}", L"%$(tEndString)"])
+ax2.xlabel = L"\tilde{t}"
+ax2.ylabel = L"\tilde{M}_\phi"
+text!(ax2, Point{2,Float64}(0.95*0.29,0.9*π), text="B", color=:black, align=(:right, :bottom), fontsize=24) 
 
-# axesVec[8].xlabel = L"F_e"
-# axesVec[8].ylabel = L"x"
-Label(fig[3,1,Left()], L"x")
-Label(fig[3,1,BottomRight()], L"F_e")
-axesVec[8].xgridvisible = false
-for ax in axesVec[9:11]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"x"
-    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-    ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])    
-    ax.xticklabelsvisible = false
-    ax.yticklabelsvisible = false
-    xlims!(ax, (0.0,1.0))
-    ylims!(ax, (0.0,xMax))
-end
-# axesVec[12].ylabel = L"\tilde{M}"
-Label(fig[4,2,Left()], L"\tilde{M}")
-Label(fig[4,2,Bottom()], L"\nu")
-Label(fig[4,3,Bottom()], L"\nu")
-Label(fig[4,4,Bottom()], L"\nu")
-for ax in axesVec[12:end]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"\tilde{M}"
-    xlims!(ax, (0.0,1.0))
-    ylims!(ax, (0.0,40.0))
-    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-    ax.yticks = (0.0:40.0:40.0, [L"0.0", L"40.0"])
-    # ax.xticklabelsvisible = false
-    ax.yticklabelsvisible = false
-end
-axesVec[12].yticklabelsvisible = true
+# ax2 = Axis(g1[1,2], yticks = (0.0:π/2.0:π, [L"0", L"π/2", L"π"]))
+# Label(g1[2,2, Top()], "(b)")
+# ylims!(ax2, (0.0, 1.05*π))
+# xlims!(ax2, (0.0, sol1.t[end+stoppoint]))
+# tSeries = sol1.t[firstPositivetIndex:end+stoppoint]
+# numericalMs1floor = [M̃ϕ(u, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ, thresh="floor") for u in sol1.u[firstPositivetIndex:end+stoppoint]]
+# numericalMs1ceil = [M̃ϕ(u, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ, thresh="ceil") for u in sol1.u[firstPositivetIndex:end+stoppoint]]
+# numericalMs2floor = [M̃ϕ2(u, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ, thresh="floor") for u in sol1.u[firstPositivetIndex:end+stoppoint]]
+# numericalMs2ceil = [M̃ϕ2(u, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ, thresh="ceil") for u in sol1.u[firstPositivetIndex:end+stoppoint]]
+# # analyticMs = [M̃ϕAnalytic.(ϕ, ν₀, τ, α_C, β, p1.K₂, K₄) for τ in tsOffset[firstPositivetIndex:end+stoppoint]]
+# allLines = [ lines!(ax2, tSeries, numericalMs1floor, linewidth=4, color=(:red, 0.5)), 
+#                 lines!(ax2, tSeries, numericalMs1ceil, linewidth=4, color=(:green, 0.5)), 
+#                 lines!(ax2, tSeries, numericalMs2floor, linewidth=4, color=(:blue, 0.5)), 
+#                 lines!(ax2, tSeries, numericalMs2ceil, linewidth=4, color=(:black, 0.5)),
+#             ]
+# allLabels = [ "numericalMs1floor",
+#     "numericalMs1ceil",
+#     "numericalMs2floor",
+#     "numericalMs2ceil",
+# ]
+# # l4 = lines!(ax2, tSeries, analyticMs, linestyle=:dot , linewidth=4, color=(:red, 1.0))
+# ind = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ)>=π/2.0, sol1.u)
+# l5 = vlines!(ax2, sol1.t[ind], color=(:black, 0.5))#, linewidth=4
+# tEndString = @sprintf("%.2f", sol1.t[end+stoppoint])
+# ax2.xticks = ([0.0, sol1.t[ind], sol1.t[end+stoppoint]], [L"0.0", L"\tilde{T}_{r50}", L"%$(tEndString)"])
+# ax2.xlabel = L"\tilde{t}"
+# ax2.ylabel = L"\tilde{M}_\phi"
+# axislegend(ax2, allLines, allLabels, labelsize = 16, position = :lt)
 
-colsize!(fig.layout, 1, Aspect(1, 1.0))
-colsize!(fig.layout, 2, Aspect(1, 1.0))
-colsize!(fig.layout, 3, Aspect(1, 1.0))
-colsize!(fig.layout, 4, Aspect(1, 1.0))
+
+linesVec_ax3 = []
+labelsVec_ax3 = []
+ax3 = Axis(g2[1,1])
+linesVec_ax3 = []
+labelsVec_ax3 = []
+hcutoff = (2.0*k_Sa/k_Sd)*((𝒮*k₁*k₃)/(2.0*𝒜*k₂*k₄) - 1.0)
+push!(linesVec_ax3, lines!(ax3, h₀s, 𝒫sim, color=(:red, 0.5), linewidth=4))
+push!(labelsVec_ax3, "Numeric")
+push!(linesVec_ax3, lines!(ax3, [0.0, h₀s..., hcutoff], 𝒫analytic, color=(:blue, 1.0), linewidth=4, linestyle=:dot))
+push!(labelsVec_ax3, "Asymptotic")
+push!(linesVec_ax3, vlines!(ax3, h_C, color=(:black, 0.5)))#, linewidth=4))
+push!(linesVec_ax3, vlines!(ax3, h_S, color=(:black, 0.5)))#, linewidth=4))
+push!(linesVec_ax3, vlines!(ax3, hcutoff, color=(:black, 0.5)))#, linewidth=4))
+
+ax3.xticks = ([0.0, h_C, h_S, hcutoff], [L"0", L"  h_C", L"h_S", L"h_{cut-off}"])
+ax3.yticks = ([0.0, 0.0001, 0.0002, 0.0003, 0.0004], [L"0.0", L"1.0", L"2.0", L"3.0", L"4.0"])
+ax3.xaxis.elements[:ticklabels].align = tuple.([:right, :left, :center, :center], :top)
+xlims!(ax3, (0.0, 1.05*hcutoff))
+ylims!(ax3, (0.0, 1.1*maximum(𝒫analytic)))
+ax3.xlabel = L"h_0"
+ax3.ylabel = L"𝓟^*_{50}/10^{-4}"
+
+text!(ax3, Point{2,Float64}(0.9*1.05*hcutoff, 0.9*1.1*maximum(𝒫analytic)), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
+
+colsize!(g2, 1, Aspect(1, 1.5))
 resize_to_layout!(fig)
 
+save(datadir("sims", subFolder, folderName, "Figure2_ν0=$(@sprintf("%.6f", ν₀))_t0=$(@sprintf("%.6f", t̃₀)).png"), fig)
 display(fig)
-save(datadir("sims",subFolder,folderName,"Figure3.png"), fig)
 
-@show sol1.t[frames]
-@show sol2.t[frames]
+@show t̃₀
+@show ν₀

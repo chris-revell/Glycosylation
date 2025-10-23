@@ -200,6 +200,6 @@ rowsize!(g2, 2, Relative(0.02))
 
 resize_to_layout!(fig)
 display(fig)
-save(datadir("sims", subFolder, folderName, "Figure4.png"), fig)
+# save(datadir("sims", subFolder, folderName, "Figure4.png"), fig)
 
 

@@ -1,4 +1,3 @@
-using MathTeXEngine # required for texfont
 
 using OrdinaryDiffEq
 using SparseArrays
@@ -10,121 +9,185 @@ using Printf
 using SciMLOperators
 using Dates
 using InvertedIndices
-using XLSX
-using DataFrames
-using Interpolations
-using Statistics
 using JLD2
+using LinearAlgebra
 
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
-@from "$(srcdir("Visualise.jl"))" using Visualise
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
-@from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
+@from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
 #%%
 
-subFolder = "Figure4"
-folderName = "25-02-10-12-38-54_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=2_thicknessProfile=GRF_α_C=5.0_β=70.0_𝒟=204.0"
-data1 = load(datadir("sims", subFolder, folderName, "solution.jld2"))
-@unpack sol1, p1, sol2, p2, rawParams = data1
+subFolder = "Figure3"
+folderName = "25-02-17-11-45-18_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
+
+# # thicknessProfile = "Gaussian"
+# differencing = "centre"
+# solver = SSPRK432()
+# nOutputs = 100
+# # σGRF = 0.2
+# σGaussian = 0.20
+
+# nSpatialDims = 1
+# Ngrid = 401
+# dims = fill(Ngrid, nSpatialDims+1)
+
+# include(projectdir("notebooks", "paramsRaw.jl"))
+
+#%%
+
+data1 = load(datadir("sims", subFolder, folderName, "solutionHVariation.jld2"))
+@unpack sol1, p1, rawParams1 = data1
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
-@unpack thicknessProfile, differencing, solver, nOutputs, σGRF, λGRF, nSpatialDims, Ngrid, dims, h₀, 𝒜, Ω, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar, ϕ = rawParams
-derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=false)
+
+data2 = load(datadir("sims", subFolder, folderName, "solutionFVariation.jld2"))
+@unpack sol2, p2, rawParams2 = data2
+mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(p2.dims)], p2.dims...)
+
+#%%
+
+derivedParams = derivedParameters(rawParams1.Ω, rawParams1.𝒜, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
 @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
 #%%
 
-colorsUsed = [(:red), (:green), (:blue)]
-νs = collect(range(0.0,1.0,p1.dims[1]))
-xs = collect(range(0.0,sqrt(π),p1.dims[2]))
+outLength = min(length(sol1.t), length(sol2.t))-5
+frames = collect(1:outLength÷2-1:outLength)
+fig = Figure(size=(1000,1000), fontsize=18)
 
+νs = collect(range(0.0, 1.0, p1.dims[1]))
+xMax = sqrt(π)
+xs = collect(range(0.0, xMax, p1.dims[2]))
 
-fig = Figure(size=(1000,800), fontsize=18, figure_padding=25)#, theme=textheme)
-g1 = GridLayout(fig[1,1])
-g2 = GridLayout(fig[2,1])
+letterArray = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
 
-
-ax0 = Axis(g1[1, 1], aspect=DataAspect())
-Label(g1[1,1,Bottom()], L"x")
-Label(g1[1,1,Left()], L"y", rotation=π/2)
-mat_h = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
-maxdif = max(abs(minimum(mat_h)-1.0), abs(maximum(mat_h)-1.0))
-clim = (1-maxdif, 1+maxdif)
-heatmap!(ax0, collect(range(0.0, sqrt(π), p1.dims[1])), collect(range(0.0, sqrt(π), p1.dims[1])), mat_h[1,:,:], colorrange=clim)
-ax0.xticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-ax0.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-text!(ax0, Point{2,Float64}(0.95*sqrt(π), 0.85*sqrt(π)), text="A", color=:white, align=(:right, :bottom), fontsize=24) 
-indMax = findmax(mat_h1[1,:,p1.dims[3]÷2])[2]
-indMin = findmin(mat_h1[1,:,p1.dims[3]÷2])[2]
-peakxs = xs[[indMax, indMin]]
-hlines!(ax0, sqrt(π)/2.0, color=(:white, 1.0), linewidth=2)
-scatter!(ax0, peakxs, [sqrt(π)/2.0, sqrt(π)/2.0], marker=:star6, color=:white, markersize=20)
-Colorbar(g1[1,2], limits=clim, label=L"h(x)")
-
-
-endPoint = length(sol1.u)-2
-frames = sol1.u[1:endPoint÷2:endPoint]
-frameInds = collect(1:endPoint÷2-1:endPoint)
-
-
-ax1 = CairoMakie.Axis(g1[1, 3])
-uInternal = zeros(Float64, p1.dims[1:2]...)
-for (i, u) in enumerate(frames)
-    uInternal .= max.(uInternal, reshape(u, p1.dims...)[:,:,p1.dims[3]÷2])
+axesVec = [Axis(fig[1,1])]
+lines!(axesVec[1], mat_h1[1,:], xs)
+xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h1[1,:])))
+ylims!(axesVec[1], (0.0, xMax))
+# axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
+axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
+axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
+for x=2:4
+    uInternal = reshape(sol1.u[frames[x-1]], p1.dims...)
+    push!(axesVec, Axis(fig[1,x]))
+    # tString = @sprintf("%.3f", sol2.t[frames[x-1]])
+    # Label(fig[1,x, Top()], L"\tilde{t} = %$tString")
+    # Label(fig[1,x,Bottom()], popfirst!(letterArray))
+    heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
+    text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
 end
-Label(g1[1,3,Bottom()], L"\nu")
-Label(g1[1,3,Left()], L"x", rotation=π/2)
-ax1.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt\pi"])
-ax1.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-clim = (0.0, 30.0)
-heatmap!(ax1, νs, xs, uInternal, colorrange=clim )
-# scatter!(ax1, [0.0, 0.0], peakxs, marker=:star6, color=:white, markersize=20)
-hlines!(ax1, peakxs, color=:white, linewidth=2)
-text!(ax1, Point{2,Float64}(0.95,0.85*sqrt(π)), text="B", color=:white, align=(:right, :bottom), fontsize=24) 
-Colorbar(g1[1,4], limits=clim, label=L"\tilde{C}(x)")
 
-
-ax2 = CairoMakie.Axis(g2[1, 1])
-M̃local = zeros(Float64, p1.dims[1])
-allLines = []
-labels = []
-times = []
-for (c,i) in enumerate(frameInds)
-    M̃local .= M̃(sol1.u[i], p1.W, p1.dims, p1.dν, p1.hᵥ)
-    push!(allLines, lines!(ax2, collect(range(0.0, 1.0, p1.dims[1])), M̃local[:,1,1], linestyle=:solid, color=(colorsUsed[c], 0.5), linewidth=4))
-    str = @sprintf("%.2f", sol1.t[i])
-    push!(labels, L"\tilde{t}=%$(str),\ GRF")
-
-    M̃local .= M̃(sol2.u[i], p2.W, p2.dims, p2.dν, p2.hᵥ)
-    push!(allLines, lines!(ax2, collect(range(0.0, 1.0, p1.dims[1])), M̃local[:,1,1], linestyle=:dot, color=(colorsUsed[c], 1.0), linewidth=4))
-    str = @sprintf("%.2f", sol1.t[i])
-    push!(labels, L"\tilde{t}=%$(str),\ Uniform")
-    push!(times, L"\tilde{t}=%$(str)")
+for x=2:4  
+    push!(axesVec, Axis(fig[2,x]))
+    # Label(fig[2,x,Bottom()], popfirst!(letterArray))
+    M = M̃(sol1.u[frames[x-1]], p1.W, p1.dims, p1.dν, p1.hᵥ)[:,1]
+    lines!(axesVec[end], νs, M)
+    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
-Label(g2[1,1,Bottom()], L"\nu")
-Label(g2[1,1,Left()], L"\tilde{M}", rotation=π/2)
-ax2.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
-ax2.yticks = (0.0:50.0:50.0, [L"0.0", L"50.0"])    
-text!(ax2, Point{2,Float64}(0.95,0.85*50.0), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
-text!(ax2, Point{2,Float64}(0.05, 0.85*50.0), text = times[1], color=:red) 
-text!(ax2, Point{2,Float64}(0.35, 0.45*50.0), text = times[2], color=:green) 
-text!(ax2, Point{2,Float64}(0.7, 0.3*50.0), text = times[3], color=:blue) 
-ax2.xgridvisible = false
-ax2.ygridvisible = false
-xlims!(ax2, (0.0, 1.0))
-mlim = (0.0, 50.0)
-ylims!(ax2, mlim)
 
-colsize!(g1, 1, Aspect(1, 1.0))
-colsize!(g1, 2, Aspect(1, 0.1))
-colsize!(g1, 3, Aspect(1, 1.0))
-colsize!(g1, 4, Aspect(1, 0.1))
-colsize!(g2, 1, Aspect(1, 1.5))
+push!(axesVec, Axis(fig[3,1]))
+# Label(fig[6,1,Top()], popfirst!(letterArray))
+lines!(axesVec[end], p2.matFₑ, xs)
+xlims!(axesVec[end], (0.0, 1.2*maximum(p2.matFₑ)))
+ylims!(axesVec[end], (0.0, xMax))
+axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
+axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
+for x=2:4
+    uInternal = reshape(sol2.u[frames[x-1]], p2.dims...)
+    push!(axesVec, Axis(fig[3,x]))
+    # Label(fig[6,x,Top()], popfirst!(letterArray))
+    heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
+    text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
+end
 
+for x=2:4
+    push!(axesVec, Axis(fig[4,x]))
+    # Label(fig[8,x,Top()], popfirst!(letterArray))
+    M = M̃(sol2.u[frames[x-1]], p2.W, p2.dims, p2.dν, p2.hᵥ)[:,1]
+    lines!(axesVec[end], νs, M)
+    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
+end
+
+# axesVec[1].xlabel = L"h"
+# axesVec[1].ylabel = L"x"
+Label(fig[1,1,Left()], L"x")
+Label(fig[1,1,BottomRight()], L"h")
+axesVec[1].xgridvisible = false
+for ax in axesVec[2:4]
+    # ax.xlabel = L"\nu"
+    # ax.ylabel = L"x"
+    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+    ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])    
+    ax.xticklabelsvisible = false
+    ax.yticklabelsvisible = false
+    xlims!(ax, (0.0,1.0))
+    ylims!(ax, (0.0,xMax))
+end
+# axesVec[5].ylabel = L"\tilde{M}"
+axesVec[end].xgridvisible = false
+Label(fig[2,2,Left()], L"\tilde{M}")
+Label(fig[2,2,Bottom()], L"\nu")
+Label(fig[2,3,Bottom()], L"\nu")
+Label(fig[2,4,Bottom()], L"\nu")
+
+for ax in axesVec[5:7]
+    # ax.xlabel = L"\nu"
+    # ax.ylabel = L"\tilde{M}"
+    xlims!(ax, (0.0,1.0))
+    ylims!(ax, (0.0,40.0))
+    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+    ax.yticks = (0.0:40.0:40.0, [L"0.0", L"40.0"])
+    # ax.xticklabelsvisible = false
+    ax.yticklabelsvisible = false
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+end
+axesVec[5].yticklabelsvisible = true
+
+# axesVec[8].xlabel = L"F_e"
+# axesVec[8].ylabel = L"x"
+Label(fig[3,1,Left()], L"x")
+Label(fig[3,1,BottomRight()], L"F_e")
+axesVec[8].xgridvisible = false
+for ax in axesVec[9:11]
+    # ax.xlabel = L"\nu"
+    # ax.ylabel = L"x"
+    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+    ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])    
+    ax.xticklabelsvisible = false
+    ax.yticklabelsvisible = false
+    xlims!(ax, (0.0,1.0))
+    ylims!(ax, (0.0,xMax))
+end
+# axesVec[12].ylabel = L"\tilde{M}"
+Label(fig[4,2,Left()], L"\tilde{M}")
+Label(fig[4,2,Bottom()], L"\nu")
+Label(fig[4,3,Bottom()], L"\nu")
+Label(fig[4,4,Bottom()], L"\nu")
+for ax in axesVec[12:end]
+    # ax.xlabel = L"\nu"
+    # ax.ylabel = L"\tilde{M}"
+    xlims!(ax, (0.0,1.0))
+    ylims!(ax, (0.0,40.0))
+    ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+    ax.yticks = (0.0:40.0:40.0, [L"0.0", L"40.0"])
+    # ax.xticklabelsvisible = false
+    ax.yticklabelsvisible = false
+end
+axesVec[12].yticklabelsvisible = true
+
+colsize!(fig.layout, 1, Aspect(1, 1.0))
+colsize!(fig.layout, 2, Aspect(1, 1.0))
+colsize!(fig.layout, 3, Aspect(1, 1.0))
+colsize!(fig.layout, 4, Aspect(1, 1.0))
 resize_to_layout!(fig)
-display(fig)
-save(datadir("sims", subFolder, folderName, "Figure4.png"), fig)
 
-@show sol1.t[frameInds]
-@show sol2.t[frameInds]
+display(fig)
+save(datadir("sims",subFolder,folderName,"Figure3.png"), fig)
+
+@show sol1.t[frames]
+@show sol2.t[frames]
