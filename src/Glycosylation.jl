@@ -2,8 +2,6 @@
 #  Glycosylation.jl
 #  Glycosylation
 #
-#  Created by Christopher Revell on 09/09/2024.
-
 
 #%%
 # flux_νₑ = (diffusive_flux_ν + advective_flux_ν)
@@ -43,7 +41,6 @@ using UnPack
 using FromFile
 using DrWatson
 using SciMLOperators
-using DataFrames
 using Statistics
 using InvertedIndices
 using GaussianRandomFields
@@ -155,7 +152,7 @@ function updateOperator!(L, u, p, t)
     L .= p.Esparse*p.Part1 .+ p.Part2
 end
 
-function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="T̃ᵣ", saveIntermediate=true)
+function glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="uniform", fDist="uniform", differencing="centre", solver=SSPRK432(), nOutputs=100, λGRF=0.1, σGRF=0.1, σGaussian=0.1, μGaussian=0.5, terminateAt="T̃ᵣ", saveIntermediate=true)
 
     # PDE discretisation parameters 
     nSpatialDims = length(dims)-1
@@ -297,6 +294,6 @@ function glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="
     return sol, p
 end
 
-export glycosylationAnyD, hFun, hFunGaussian
+export glycosylation, hFun, hFunGaussian
 
 end

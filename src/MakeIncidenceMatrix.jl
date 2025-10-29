@@ -1,8 +1,7 @@
 #
 #  MakeIncidenceMatrix.jl
-# Glycosylation
+#  Glycosylation
 #
-#  Created by Christopher Revell on 02/05/2024.
 
 module MakeIncidenceMatrix
 

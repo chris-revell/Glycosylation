@@ -8,8 +8,8 @@ using Printf
 using SciMLOperators
 using Dates
 using InvertedIndices
-using XLSX
-using DataFrames
+# using XLSX
+# using DataFrames
 using Interpolations
 using Statistics
 using JLD2
@@ -49,8 +49,8 @@ mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
-solCentre, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", differencing="centre", solver=solver, nOutputs=nOutputs, terminateAt=terminateAt)
-solUpstream, p = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", differencing="upstream", solver=solver, nOutputs=nOutputs, terminateAt=terminateAt)
+solCentre, p = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", differencing="centre", solver=solver, nOutputs=nOutputs, terminateAt=terminateAt)
+solUpstream, p = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", differencing="upstream", solver=solver, nOutputs=nOutputs, terminateAt=terminateAt)
 println("finished sim")
 
 #%%

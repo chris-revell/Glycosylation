@@ -61,9 +61,9 @@ dims = [Ngrid,2]
 
 #%%
 
-# sol = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing=differencing) 
-solCentre = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432())#NDBLSRK124()) 
-solUpstream = glycosylationAnyD(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432())#NDBLSRK124()) 
+# sol = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing=differencing) 
+solCentre = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing="centre", solver=SSPRK432())#NDBLSRK124()) 
+solUpstream = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝓓, β, thickness="uniform", differencing="upstream", solver=SSPRK432())#NDBLSRK124()) 
 println("finished sim")
 
 #%%

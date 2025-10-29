@@ -1,8 +1,7 @@
 #
 #  MakeWeightMatrices.jl
-# Glycosylation
+#  Glycosylation
 #
-#  Created by Christopher Revell on 04/06/2024.
 
 module MakeWeightMatrices
 
