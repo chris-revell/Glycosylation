@@ -1,4 +1,3 @@
-
 using OrdinaryDiffEq
 using SparseArrays
 using UnPack
@@ -15,44 +14,25 @@ using LinearAlgebra
 @from "$(srcdir("Glycosylation.jl"))" using Glycosylation
 @from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
-@from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
+# @from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
-#%%
-
-subFolder = "Figure3"
-folderName = "25-02-17-11-45-18_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
-
-# # thicknessProfile = "Gaussian"
-# differencing = "centre"
-# solver = SSPRK432()
-# nOutputs = 100
-# # σGRF = 0.2
-# σGaussian = 0.20
-
-# nSpatialDims = 1
-# Ngrid = 401
-# dims = fill(Ngrid, nSpatialDims+1)
-
-# include(projectdir("notebooks", "paramsRaw.jl"))
-
-#%%
+subFolder = "new/Figure4"
+folderName = "25-10-30-13-54-04_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
 
 data1 = load(datadir("sims", subFolder, folderName, "solutionHVariation.jld2"))
-@unpack sol1, p1, rawParams1 = data1
+# @unpack sol1, p1, rawParams1 = data1
+@unpack sol1, p1 = data1
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
 
 data2 = load(datadir("sims", subFolder, folderName, "solutionFVariation.jld2"))
-@unpack sol2, p2, rawParams2 = data2
+# @unpack sol2, p2, rawParams2 = data2
+@unpack sol2, p2 = data2
 mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(p2.dims)], p2.dims...)
 
-#%%
+# derivedParams = derivedParameters(rawParams1.Ω, rawParams1.𝒜, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
+# @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
-derivedParams = derivedParameters(rawParams1.Ω, rawParams1.𝒜, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
-
-#%%
-
-outLength = min(length(sol1.t), length(sol2.t))-5
+outLength = min(length(sol1.t), length(sol2.t))
 frames = collect(1:outLength÷2-1:outLength)
 fig = Figure(size=(1000,1000), fontsize=18)
 
@@ -63,7 +43,7 @@ xs = collect(range(0.0, xMax, p1.dims[2]))
 letterArray = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
 
 axesVec = [Axis(fig[1,1])]
-lines!(axesVec[1], mat_h1[1,:], xs)
+lines!(axesVec[1], mat_h1[1,:], xs, linewidth=2)
 xlims!(axesVec[1], (0.0, 1.2*maximum(mat_h1[1,:])))
 ylims!(axesVec[1], (0.0, xMax))
 # axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
@@ -84,13 +64,13 @@ for x=2:4
     push!(axesVec, Axis(fig[2,x]))
     # Label(fig[2,x,Bottom()], popfirst!(letterArray))
     M = M̃(sol1.u[frames[x-1]], p1.W, p1.dims, p1.dν, p1.hᵥ)[:,1]
-    lines!(axesVec[end], νs, M)
+    lines!(axesVec[end], νs, M, linewidth=2)
     text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
 
 push!(axesVec, Axis(fig[3,1]))
 # Label(fig[6,1,Top()], popfirst!(letterArray))
-lines!(axesVec[end], p2.matFₑ, xs)
+lines!(axesVec[end], p2.matFₑ, xs, linewidth=2)
 xlims!(axesVec[end], (0.0, 1.2*maximum(p2.matFₑ)))
 ylims!(axesVec[end], (0.0, xMax))
 axesVec[end].yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
@@ -108,7 +88,7 @@ for x=2:4
     push!(axesVec, Axis(fig[4,x]))
     # Label(fig[8,x,Top()], popfirst!(letterArray))
     M = M̃(sol2.u[frames[x-1]], p2.W, p2.dims, p2.dν, p2.hᵥ)[:,1]
-    lines!(axesVec[end], νs, M)
+    lines!(axesVec[end], νs, M, linewidth=2)
     text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
 
@@ -187,7 +167,8 @@ colsize!(fig.layout, 4, Aspect(1, 1.0))
 resize_to_layout!(fig)
 
 display(fig)
-save(datadir("sims",subFolder,folderName,"Figure3.png"), fig)
+save(datadir("sims",subFolder,folderName,"Figure4.png"), fig)
+save(datadir("sims",subFolder,folderName,"Figure4.pdf"), fig)
 
 @show sol1.t[frames]
 @show sol2.t[frames]
