@@ -99,7 +99,6 @@ display(fig)
 subFolder = "h0sweep"
 # paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝒟 T̃ᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))"#_$(paramsName)"
-# Create frames subdirectory to store system state at each output time
 mkpath(datadir("sims",subFolder,folderName))
 
 save(datadir("sims", subFolder, folderName, "simulationPvsh.png"), fig)

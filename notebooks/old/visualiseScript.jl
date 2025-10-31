@@ -14,7 +14,6 @@ using OrdinaryDiffEq
 
 subFolder = "CSF"
 folderName = "24-12-16-18-31-33_K₂=0.12_K₄=0.1_Tᵣ=5.0_differencing=centre_nSpatialDims=1_thicknessProfile=GRF_α_C=5.0_β=8.8_𝓓=34.6"
-# Create frames subdirectory to store system state at each output time
 data = load(datadir("sims", subFolder, folderName, "output.jld2"))
 @unpack sol, p = data
 

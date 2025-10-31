@@ -25,15 +25,15 @@ using JLD2
 subFolder = ""
 terminateAt = "nuWall"
 thicknessProfile = "GRF"
-nOutputs = 100
+# nOutputs = 100
 σGRF = 0.3
 λGRF = 0.1
 
-nSpatialDims = 1
-Ngrid = 201
+nSpatialDims = 2
+Ngrid = 101
 dims = fill(Ngrid, nSpatialDims+1)
 
-params = "derived"
+params = "raw"
 
 if params=="raw"
     include(projectdir("notebooks", "paramsRaw.jl"))
@@ -85,15 +85,12 @@ end
 # Create directory for run data labelled with current time.
 paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝒟 T̃ᵣ thicknessProfile differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
-# Create frames subdirectory to store system state at each output time
 mkpath(datadir("sims",subFolder,folderName))
 
 #%%
 
 sol, p = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF, λGRF=λGRF, terminateAt=terminateAt)
 println("finished sim")
-
-
 
 jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol, p, savedParams)
 
@@ -107,11 +104,11 @@ if nSpatialDims==1
         thicknessPlot(p.hᵥ, p.dims; subFolder=subFolder, folderName=folderName)
     end
 else    
-    uSlices = [selectdim(reshape(u, dims...), 3, dims[3]÷2) for u in sol.u[1:35]]
-    uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices[1:35]]
+    uSlices = [selectdim(reshape(u, dims...), 3, dims[3]÷2) for u in sol.u]
+    uSlicesReshaped = [reshape(u, prod(dims[Not(3)])) for u in uSlices]
     concentrationSurfaceMovie(uSlicesReshaped, dims[1:2]; subFolder=subFolder, folderName=folderName)
     # concentrationHeatmapMovie(uSlicesReshaped, dims; subFolder=subFolder, folderName=folderName)
-    M̃movie(sol.u[1:50], p; subFolder=subFolder, folderName=folderName)
+    M̃movie(sol.u, p; subFolder=subFolder, folderName=folderName)
     if thicknessProfile=="GRF"
         thicknessPlot(p.hᵥ, dims; subFolder=subFolder, folderName=folderName)
     end

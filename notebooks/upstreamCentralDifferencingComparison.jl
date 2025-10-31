@@ -71,7 +71,6 @@ println("finished sim")
 # Create directory for run data labelled with current time.
 paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝓓 T̃ᵣ differencing
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)"
-# Create frames subdirectory to store system state at each output time
 subFolder = "analyticNumericFit"
 mkpath(datadir("sims",subFolder,folderName))
 
