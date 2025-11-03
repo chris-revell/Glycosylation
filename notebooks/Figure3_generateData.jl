@@ -22,7 +22,7 @@ nSpatialDims = 1
 Ngrid = 401
 dims = fill(Ngrid, nSpatialDims+1)
 
-subFolder = "new/Figure3"
+subFolder = "Figure3"
 folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))" # Create directory for run data labelled with current time.
 mkpath(datadir("sims",subFolder,folderName))
 

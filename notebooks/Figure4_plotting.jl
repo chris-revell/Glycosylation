@@ -16,7 +16,7 @@ using LinearAlgebra
 @from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
 # @from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
-subFolder = "new/Figure4"
+subFolder = "Figure4"
 folderName = "25-10-30-13-54-04_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
 
 data1 = load(datadir("sims", subFolder, folderName, "solutionHVariation.jld2"))

@@ -18,7 +18,7 @@ using JLD2
 
 #%%
 
-subFolder = "new/Figure3"
+subFolder = "Figure3"
 folderName = "25-10-30-17-26-58"
 data1 = load(datadir("sims", subFolder, folderName, "solutions.jld2"))
 @unpack sols, ps, h₀s = data1

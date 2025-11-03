@@ -17,7 +17,7 @@ using LinearAlgebra
 
 include(projectdir("notebooks", "paramsRaw.jl"))
 
-subFolder = "new/Figure4"
+subFolder = "Figure4"
 terminateAt = "nuWall"
 σGaussian = 0.20
 nSpatialDims = 1
