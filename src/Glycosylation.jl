@@ -104,21 +104,32 @@ function hFunGaussian(dims; σ=0.5, μ=0.5)
     end
 end
 
+function conditionProgressInterval(u, t, integrator)
+    integrator.dt > t%integrator.p.interval
+end
+
+affectPrintProgress(integrator) = println("$(floor(Int64,100.0*integrator.t/integrator.p.tMax))")
+
 function conditionHalfProduction(u, t, integrator)
-    M̃ϕ(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ, 0.5) - 0.5*π  
+    M̃ϕ(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ, 0.5) > 0.5*π  
 end
 
 function conditionNuWall(u, t, integrator)
-    uInternal = reshape(u, integrator.p.dims...)
-    findmax(uInternal)[2][1] == integrator.p.dims[1] ? true : false
-    # findmax(M̃(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ))[2].I[1] > 0.9*integrator.p.dims[1] ? true : false
+    M̃ϕ(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ, 0.8) > 0.5*π  
 end
+
+# function conditionNuWall(u, t, integrator)
+#     uInternal = reshape(u, integrator.p.dims...)
+#     findmax(uInternal)[2][1] == integrator.p.dims[1]
+#     # findmax(M̃(u, integrator.p.W, integrator.p.dims, integrator.p.dν, integrator.p.hᵥ))[2].I[1] > 0.9*integrator.p.dims[1] ? true : false
+# end
 
 affectTerminate!(integrator) = terminate!(integrator, ReturnCode.Success)    
 
 # cbHalfProduction = DiscreteCallback(conditionHalfProduction, affectTerminate!)
-cbHalfProduction = ContinuousCallback(conditionHalfProduction, affectTerminate!)
+cbHalfProduction = DiscreteCallback(conditionHalfProduction, affectTerminate!)
 cbNuWall = DiscreteCallback(conditionNuWall, affectTerminate!)
+cbProgress = DiscreteCallback(conditionProgressInterval, affectPrintProgress)
 
 # Integrate over ν to find E field in spatial dimensions.
 # When state vector u is reshaped to an array with shape dims, assume ν is the first dimension of this array
@@ -133,17 +144,6 @@ function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
     Esparse[diagind(Esparse)] .= reshape(matE, prod(dims))
     return nothing
 end
-# function E!(u, dims, Esparse, matE, matFₑ, K₂, dν)
-#     # Convert state vector to matrix of concentrations (We're calculating enzyme distribution, but using bulk concentration?)
-#     # cs = selectdim(reshape(u, dims...), 1, 2:(dims[1]-1))
-#     uMat = reshape(u, dims...)
-#     integ = dν.*(0.5.*selectdim(uMat, 1, 1) .+ dropdims(sum(selectdim(uMat, 1, 2:dims[1]-1), dims=1), dims=1) .+ 0.5.*selectdim(uMat, 1, dims[1]))
-#     for slice in eachslice(matE, dims=1)
-#         slice .= matFₑ.*(K₂./(K₂ .+ integ))
-#     end
-#     Esparse[diagind(Esparse)] .= reshape(matE, prod(dims))
-#     return nothing
-# end
 
 # Function to update linear operator with new values for E at each iteration in solving the ODE system
 function updateOperator!(L, u, p, t)
@@ -264,6 +264,8 @@ function glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="unif
         dν = dν,
         W = W,
         hᵥ = hᵥ,
+        interval = T̃ᵣ/(nOutputs-1),
+        tMax = T̃ᵣ
     )
     fullOperator = MatrixOperator(Esparse*Part1, update_func! = updateOperator!)
     println("solving")
@@ -278,9 +280,9 @@ function glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="unif
     elseif terminateAt == "nuWall"
         prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
         if saveIntermediate == true
-            sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=cbNuWall, saveat=T̃ᵣ/(nOutputs-1), save_end=true)
+            sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=CallbackSet(cbNuWall, cbProgress), saveat=T̃ᵣ/(nOutputs-1), save_end=true)
         else
-            sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=cbNuWall, save_on=false, save_end=true) 
+            sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=CallbackSet(cbNuWall, cbProgress), save_on=false, save_end=true) 
         end
     else 
         prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
