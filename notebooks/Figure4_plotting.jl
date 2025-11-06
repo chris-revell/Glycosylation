@@ -67,8 +67,9 @@ for x=2:4
     lines!(axesVec[end], νs, M, linewidth=2)
     text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
+vlines!(axesVec[end], 0.5, color=(:black,0.5))
 
-push!(axesVec, Axis(fig[3,1]))
+push!(axesVec, Axis(fig[4,1]))
 # Label(fig[6,1,Top()], popfirst!(letterArray))
 lines!(axesVec[end], p2.matFₑ, xs, linewidth=2)
 xlims!(axesVec[end], (0.0, 1.2*maximum(p2.matFₑ)))
@@ -78,28 +79,24 @@ axesVec[end].xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
 text!(axesVec[end], Point{2,Float64}(0.95*1.2*maximum(mat_h1[1,:]),1.5), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 for x=2:4
     uInternal = reshape(sol2.u[frames[x-1]], p2.dims...)
-    push!(axesVec, Axis(fig[3,x]))
+    push!(axesVec, Axis(fig[4,x]))
     # Label(fig[6,x,Top()], popfirst!(letterArray))
     heatmap!(axesVec[end], νs, xs, uInternal, colormap=:batlow)
     text!(axesVec[end], Point{2,Float64}(0.95,1.5), text=popfirst!(letterArray), color=:white, align=(:right, :bottom), fontsize=24) 
 end
 
 for x=2:4
-    push!(axesVec, Axis(fig[4,x]))
-    # Label(fig[8,x,Top()], popfirst!(letterArray))
+    push!(axesVec, Axis(fig[5,x]))
     M = M̃(sol2.u[frames[x-1]], p2.W, p2.dims, p2.dν, p2.hᵥ)[:,1]
     lines!(axesVec[end], νs, M, linewidth=2)
     text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
+vlines!(axesVec[end], 0.5, color=(:black,0.5))
 
-# axesVec[1].xlabel = L"h"
-# axesVec[1].ylabel = L"x"
-Label(fig[1,1,Left()], L"x")
-Label(fig[1,1,BottomRight()], L"h")
+Label(fig[1,1, Left()], L"x")
+Label(fig[2,1, Top()], L"h")
 axesVec[1].xgridvisible = false
 for ax in axesVec[2:4]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"x"
     ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
     ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])    
     ax.xticklabelsvisible = false
@@ -107,35 +104,28 @@ for ax in axesVec[2:4]
     xlims!(ax, (0.0,1.0))
     ylims!(ax, (0.0,xMax))
 end
-# axesVec[5].ylabel = L"\tilde{M}"
 axesVec[end].xgridvisible = false
 Label(fig[2,2,Left()], L"\tilde{M}")
-Label(fig[2,2,Bottom()], L"\nu")
-Label(fig[2,3,Bottom()], L"\nu")
-Label(fig[2,4,Bottom()], L"\nu")
+Label(fig[3,2,Top()], L"\nu")
+Label(fig[3,3,Top()], L"\nu")
+Label(fig[3,4,Top()], L"\nu")
 
 for ax in axesVec[5:7]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"\tilde{M}"
     xlims!(ax, (0.0,1.0))
     ylims!(ax, (0.0,40.0))
     ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
     ax.yticks = (0.0:40.0:40.0, [L"0.0", L"40.0"])
-    # ax.xticklabelsvisible = false
     ax.yticklabelsvisible = false
     ax.xgridvisible = false
     ax.ygridvisible = false
 end
 axesVec[5].yticklabelsvisible = true
+axesVec[7].xticks = (0.0:0.5:1.0, [L"0.0", L"\phi", L"1.0"])
 
-# axesVec[8].xlabel = L"F_e"
-# axesVec[8].ylabel = L"x"
-Label(fig[3,1,Left()], L"x")
-Label(fig[3,1,BottomRight()], L"F_e")
+Label(fig[4,1,Left()], L"x")
+Label(fig[5,1,Top()], L"F_e")
 axesVec[8].xgridvisible = false
 for ax in axesVec[9:11]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"x"
     ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
     ax.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])    
     ax.xticklabelsvisible = false
@@ -143,32 +133,55 @@ for ax in axesVec[9:11]
     xlims!(ax, (0.0,1.0))
     ylims!(ax, (0.0,xMax))
 end
-# axesVec[12].ylabel = L"\tilde{M}"
-Label(fig[4,2,Left()], L"\tilde{M}")
-Label(fig[4,2,Bottom()], L"\nu")
-Label(fig[4,3,Bottom()], L"\nu")
-Label(fig[4,4,Bottom()], L"\nu")
+Label(fig[5,2,Left()], L"\tilde{M}")
+Label(fig[6,2,Top()], L"\nu")
+Label(fig[6,3,Top()], L"\nu")
+Label(fig[6,4,Top()], L"\nu")
 for ax in axesVec[12:end]
-    # ax.xlabel = L"\nu"
-    # ax.ylabel = L"\tilde{M}"
     xlims!(ax, (0.0,1.0))
     ylims!(ax, (0.0,40.0))
     ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
     ax.yticks = (0.0:40.0:40.0, [L"0.0", L"40.0"])
-    # ax.xticklabelsvisible = false
     ax.yticklabelsvisible = false
 end
 axesVec[12].yticklabelsvisible = true
+axesVec[end].xticks = (0.0:0.5:1.0, [L"0.0", L"\phi", L"1.0"])
 
 colsize!(fig.layout, 1, Aspect(1, 1.0))
 colsize!(fig.layout, 2, Aspect(1, 1.0))
 colsize!(fig.layout, 3, Aspect(1, 1.0))
 colsize!(fig.layout, 4, Aspect(1, 1.0))
+
+rowsize!(fig.layout, 1, Relative(0.2475))
+rowsize!(fig.layout, 2, Relative(0.2475))
+rowsize!(fig.layout, 3, Relative(0.005))
+rowsize!(fig.layout, 4, Relative(0.2475))
+rowsize!(fig.layout, 5, Relative(0.2475))
+rowsize!(fig.layout, 6, Relative(0.005))
+
+rowgap!(fig.layout, 1, Relative(-0.003))
+rowgap!(fig.layout, 2, Relative(-0.003))
+rowgap!(fig.layout, 4, Relative(-0.003))
+rowgap!(fig.layout, 5, Relative(-0.003))
+
 resize_to_layout!(fig)
 
 display(fig)
 save(datadir("sims",subFolder,folderName,"Figure4.png"), fig)
 save(datadir("sims",subFolder,folderName,"Figure4.pdf"), fig)
 
-@show sol1.t[frames]
-@show sol2.t[frames]
+# @show sol1.t[frames]
+# @show sol2.t[frames]
+
+include(projectdir("notebooks", "paramsRaw.jl"))
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
+ind50 = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, 0.5) > 0.5*π, sol1.u)
+Tᵣ₅₀Star = sol1.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
+𝒫sim1 = Mstarϕ(sol1.u[ind50], p1.W, p1.dims, p1.dν, p1.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+@show 𝒫sim1
+
+ind50 = findfirst(x->M̃ϕ(x, p2.W, p2.dims, p2.dν, p2.hᵥ, 0.5) > 0.5*π, sol2.u)
+Tᵣ₅₀Star = sol2.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
+𝒫sim2 = Mstarϕ(sol2.u[ind50], p2.W, p2.dims, p2.dν, p2.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+@show 𝒫sim2

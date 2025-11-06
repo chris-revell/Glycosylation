@@ -280,7 +280,8 @@ function glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β; thickness="unif
     elseif terminateAt == "nuWall"
         prob = ODEProblem(fullOperator, u0, (0.0, T̃ᵣ), p)
         if saveIntermediate == true
-            sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=CallbackSet(cbNuWall, cbProgress), saveat=T̃ᵣ/(nOutputs-1), save_end=true)
+            sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=cbNuWall, saveat=T̃ᵣ/(nOutputs-1), save_end=true)
+            # sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=CallbackSet(cbNuWall, cbProgress), saveat=T̃ᵣ/(nOutputs-1), save_end=true)
         else
             sol = solve(prob, solver, tstops=T̃ᵣ/(nOutputs-1), callback=CallbackSet(cbNuWall, cbProgress), save_on=false, save_end=true) 
         end

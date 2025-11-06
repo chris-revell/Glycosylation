@@ -96,7 +96,7 @@ println("finished sim")
 
 #%%
 
-stoppoint = -10
+stoppoint = -15
 
 midpoint = (length(sol1.u)+stoppoint)÷2
 C_peak, ind_peak = findmax(reshape(sol1.u[midpoint], p1.dims...)[:,dims[2]÷2])
@@ -135,7 +135,7 @@ t̃₀ = sol1.t[midpoint] - 1/(4.0*π*D*C_peak^2)
 tsOffset = sol1.t.-t̃₀
 firstPositivetIndex = findfirst(x->x>0, tsOffset)
 
-fig = Figure(size=(1000,800), fontsize=24)#, figure_padding=25)
+fig = Figure(size=(1000,800), fontsize=24, figure_padding=(0,50,1,11))
 g1 = GridLayout(fig[1,1])
 g2 = GridLayout(fig[2,1])
 
@@ -157,16 +157,17 @@ end
 ax1.xlabel = L"\nu"
 ax1.ylabel = L"\tilde{C}"
 ax1.yticks = (0.0:20.0:20.0, [L"0.0", L"20.0"])
-ax1.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+ax1.xticks = (0.0:0.5:1.0, [L"0.0", L"\phi", L"1.0"])
+lϕ = vlines!(ax1, 0.5, color=(:black, 0.5))#, linewidth=4
 text!(ax1, Point{2,Float64}(0.95,0.9*20.0), text="A", color=:black, align=(:right, :bottom), fontsize=24) 
-text!(ax1, Point{2,Float64}(0.05, 0.9*20.0), text = L"t=%$(allTs_ax1[1])", color=:red) 
-text!(ax1, Point{2,Float64}(0.35, 0.4*20.0), text = L"t=%$(allTs_ax1[2])", color=:green) 
-text!(ax1, Point{2,Float64}(0.7, 0.3*20.0), text = L"t=%$(allTs_ax1[3])", color=:blue) 
+text!(ax1, Point{2,Float64}(0.05, 0.9*20.0), text = L"\tilde{t}=%$(allTs_ax1[1])", color=:red) 
+text!(ax1, Point{2,Float64}(0.25, 0.4*20.0), text = L"\tilde{t}=%$(allTs_ax1[2])", color=:green) 
+text!(ax1, Point{2,Float64}(0.7, 0.3*20.0), text = L"\tilde{t}=%$(allTs_ax1[3])", color=:blue) 
 ylims!(ax1, (0.0, 20.0))
 xlims!(ax1, (0.0, 1.0))
 
 
-ax2 = Axis(g1[1,2], yticks = (0.0:π/2.0:π, [L"0", L"π/2", L"π"]))
+ax2 = Axis(g1[1,2], yticks = (0.0:π/2.0:π, [L"0", L"π/2", L"π"]))#, aspect=AxisAspect(1.5))
 ylims!(ax2, (0.0, 1.05*π))
 xlims!(ax2, (0.0, sol1.t[end+stoppoint]))
 tSeries = sol1.t[firstPositivetIndex:end+stoppoint]
@@ -179,7 +180,7 @@ allLabels = [ "Numeric",
     "Asymptotic",
 ]
 ind = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, ϕ)>=π/2.0, sol1.u)
-l5 = vlines!(ax2, sol1.t[ind], color=(:black, 0.5))#, linewidth=4
+l50 = vlines!(ax2, sol1.t[ind], color=(:black, 0.5))#, linewidth=4
 tEndString = @sprintf("%.2f", sol1.t[end+stoppoint])
 ax2.xticks = ([0.0, sol1.t[ind], sol1.t[end+stoppoint]], [L"0.0", L"\tilde{T}_{r50}", L"%$(tEndString)"])
 ax2.xlabel = L"\tilde{t}"
@@ -198,21 +199,38 @@ push!(labelsVec_ax3, "Asymptotic")
 push!(linesVec_ax3, vlines!(ax3, h_C, color=(:black, 0.5)))#, linewidth=4))
 push!(linesVec_ax3, vlines!(ax3, h_S, color=(:black, 0.5)))#, linewidth=4))
 push!(linesVec_ax3, vlines!(ax3, hcutoff, color=(:black, 0.5)))#, linewidth=4))
-ax3.xticks = ([0.0, h_C, h_S, hcutoff], [L"0", L"  h_C", L"h_S", L"h_{cut-off}"])
-ax3.yticks = ([0.0, 0.0001, 0.0002, 0.0003, 0.0004], [L"0.0", L"1.0", L"2.0", L"3.0", L"4.0"])
-ax3.xaxis.elements[:ticklabels].align = tuple.([:right, :left, :center, :center], :top)
+# ax3.xticks = ([0.0, h_C, h_S, hcutoff], [L"0", L"  h_C", L"h_S", L"h_{cut-off}"])
+ax3.xticks = ([0.0, h_C, h_S, 3.0, 6.0, hcutoff], [L"0", L"h_C", L"h_S", L"3.0", L"6.0", L"h_{cut-off}"])
+# ax3.xticks = ([0.0, h_C, 1.0, h_S], [L"0", L"h_C", L"1.0", L"h_S"])
+ax3.yticks = ([0.0, 0.0001], [L"0.0", L"0.0001"])
+ax3.xaxis.elements[:ticklabels].align = tuple.([:right, :left, :center, :center, :center, :center], :top)
+ax3.xgridvisible=false
 xlims!(ax3, (0.0, 1.05*hcutoff))
 ylims!(ax3, (0.0, 1.1*maximum(𝒫analytic)))
-ax3.xlabel = L"h_0"
-ax3.ylabel = L"𝓟^*_{50}/10^{-4}"
+ax3.xlabel = L"h_0 [L]"
+ax3.ylabel = L"𝓟^*_{50} [M/T]"
 text!(ax3, Point{2,Float64}(0.9*1.05*hcutoff, 0.9*1.1*maximum(𝒫analytic)), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
 
 colsize!(g2, 1, Aspect(1, 1.5))
+
+
+@show t̃₀
+@show ν₀
+
+
+maxProductionValSim, maxProductionIndSim = findmax(𝒫sim) 
+@show maxProductionValSim
+@show h₀s[maxProductionIndSim]
+
+maxProductionValAnalytic, maxProductionIndAnalytic = findmax(𝒫analytic) 
+@show maxProductionValAnalytic
+@show h₀s[maxProductionIndAnalytic]
+
+scatter!(ax3, [h₀s[maxProductionIndSim]], [maxProductionValSim], color=:red, marker=:cross, markersize=15)
+scatter!(ax3, [h₀s[maxProductionIndAnalytic]], [maxProductionValAnalytic], color=:blue, marker=:cross, markersize=15)
+
 resize_to_layout!(fig)
 
 save(datadir("sims", subFolder, folderName, "Figure3_ν0=$(@sprintf("%.6f", ν₀))_t0=$(@sprintf("%.6f", t̃₀)).png"), fig)
 save(datadir("sims", subFolder, folderName, "Figure3_ν0=$(@sprintf("%.6f", ν₀))_t0=$(@sprintf("%.6f", t̃₀)).pdf"), fig)
 display(fig)
-
-@show t̃₀
-@show ν₀

@@ -20,7 +20,7 @@ using JLD2
 #%%
 
 subFolder = "Figure5"
-folderName = "25-11-01-13-49-16_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=2_thicknessProfile=GRF_α_C=5.0_β=70.0_𝒟=204.0"
+folderName = "25-11-06-16-07-22_K₂=0.3_K₄=1.0_T̃ᵣ=3.85_differencing=centre_nSpatialDims=2_thicknessProfile=GRF_α_C=5.0_β=70.0_𝒟=204.0"
 data1 = load(datadir("sims", subFolder, folderName, "solution.jld2"))
 @unpack sol1, p1, sol2, p2, rawParams = data1
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
@@ -56,16 +56,16 @@ clim = (1-maxdif, 1+maxdif)
 heatmap!(ax0, collect(range(0.0, sqrt(π), p1.dims[1])), collect(range(0.0, sqrt(π), p1.dims[1])), mat_h[1,:,:], colorrange=clim)
 ax0.xticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
 ax0.yticks = (0.0:sqrt(π):sqrt(π), [L"0.0", L"\sqrt{\pi}"])
-text!(ax0, Point{2,Float64}(0.95*sqrt(π), 0.85*sqrt(π)), text="A", color=:white, align=(:right, :bottom), fontsize=24) 
+text!(ax0, Point{2,Float64}(0.95*sqrt(π), 0.9*sqrt(π)), text="A", color=:white, align=(:right, :bottom), fontsize=24) 
 indMax = findmax(mat_h1[1,:,p1.dims[3]÷2])[2]
 indMin = findmin(mat_h1[1,:,p1.dims[3]÷2])[2]
 peakxs = xs[[indMax, indMin]]
 hlines!(ax0, sqrt(π)/2.0, color=(:white, 1.0), linewidth=2)
 scatter!(ax0, peakxs, [sqrt(π)/2.0, sqrt(π)/2.0], marker=:star6, color=:white, markersize=20)
-Colorbar(g1[1,2], limits=clim, label=L"h(x)")
+Colorbar(g1[1,2], limits=clim, label=L"h\left(\mathbf{x}_\perp\right)")
 
 
-endPoint = length(sol2.u)-200
+endPoint = length(sol2.u)-20
 frameInds = collect(1:endPoint÷2-1:endPoint)
 
 ax1 = CairoMakie.Axis(g1[1, 3])
@@ -81,8 +81,8 @@ clim = (0.0, 30.0)
 heatmap!(ax1, νs, xs, uInternal, colorrange=clim )
 # scatter!(ax1, [0.0, 0.0], peakxs, marker=:star6, color=:white, markersize=20)
 hlines!(ax1, peakxs, color=:white, linewidth=2)
-text!(ax1, Point{2,Float64}(0.95,0.85*sqrt(π)), text="B", color=:white, align=(:right, :bottom), fontsize=24) 
-Colorbar(g1[1,4], limits=clim, label=L"\tilde{C}(x)")
+text!(ax1, Point{2,Float64}(0.95,0.9*sqrt(π)), text="B", color=:white, align=(:right, :bottom), fontsize=24) 
+Colorbar(g1[1,4], limits=clim, label=L"\tilde{C}\left(\nu, x, \sqrt{\pi}/2, \tilde{t}\right)")
 
 
 ax2 = CairoMakie.Axis(g2[1, 1])
@@ -102,11 +102,14 @@ for (c,i) in enumerate(frameInds)
     push!(labels, L"\tilde{t}=%$(str),\ Uniform")
     push!(times, L"\tilde{t}=%$(str)")
 end
-Label(g2[1,1,Bottom()], L"\nu")
+# Label(g2[1,1,Bottom()], L"\nu")
 Label(g2[1,1,Left()], L"\tilde{M}", rotation=π/2)
 ax2.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
+ax2.xticks = (0.0:0.5:1.0, [L"0.0", L"\phi", L"1.0"])
 ax2.yticks = (0.0:50.0:50.0, [L"0.0", L"50.0"])    
-text!(ax2, Point{2,Float64}(0.95,0.85*50.0), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
+ax2.xlabel = L"\nu"
+vlines!(ax2, 0.5, color=(:black,0.5))
+text!(ax2, Point{2,Float64}(0.95,0.9*50.0), text="C", color=:black, align=(:right, :bottom), fontsize=24) 
 text!(ax2, Point{2,Float64}(0.05, 0.85*50.0), text = times[1], color=:red) 
 text!(ax2, Point{2,Float64}(0.35, 0.45*50.0), text = times[2], color=:green) 
 text!(ax2, Point{2,Float64}(0.7, 0.3*50.0), text = times[3], color=:blue) 
@@ -129,3 +132,16 @@ save(datadir("sims", subFolder, folderName, "Figure5.pdf"), fig)
 
 @show sol1.t[frameInds]
 @show sol2.t[frameInds]
+
+include(projectdir("notebooks", "paramsRaw.jl"))
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
+ind50 = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, 0.5) > 0.5*π, sol1.u)
+Tᵣ₅₀Star = sol1.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
+𝒫sim1 = Mstarϕ(sol1.u[ind50], p1.W, p1.dims, p1.dν, p1.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+@show 𝒫sim1
+
+ind50 = findfirst(x->M̃ϕ(x, p2.W, p2.dims, p2.dν, p2.hᵥ, 0.5) > 0.5*π, sol2.u)
+Tᵣ₅₀Star = sol2.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
+𝒫sim2 = Mstarϕ(sol2.u[ind50], p2.W, p2.dims, p2.dν, p2.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+@show 𝒫sim2
