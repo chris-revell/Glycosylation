@@ -17,22 +17,24 @@ using LinearAlgebra
 # @from "$(srcdir("CisternaWidth.jl"))" using CisternaWidth
 
 subFolder = "Figure4"
-folderName = "25-10-30-13-54-04_K₂=0.3_K₄=1.0_T̃ᵣ=0.385_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
+folderName = "25-11-07-17-16-06_K₂=0.3_K₄=1.0_T̃ᵣ=3.85_differencing=centre_nSpatialDims=1_α_C=5.0_β=70.0_𝒟=204.0"
+
+data0 = load(datadir("sims", subFolder, folderName, "solutionNoVariation.jld2"))
+@unpack sol0, p0 = data0
+mat_h0 = reshape([p0.hᵥ[i,i] for i=1:prod(p0.dims)], p0.dims...)
 
 data1 = load(datadir("sims", subFolder, folderName, "solutionHVariation.jld2"))
-# @unpack sol1, p1, rawParams1 = data1
 @unpack sol1, p1 = data1
 mat_h1 = reshape([p1.hᵥ[i,i] for i=1:prod(p1.dims)], p1.dims...)
 
 data2 = load(datadir("sims", subFolder, folderName, "solutionFVariation.jld2"))
-# @unpack sol2, p2, rawParams2 = data2
 @unpack sol2, p2 = data2
 mat_h2 = reshape([p2.hᵥ[i,i] for i=1:prod(p2.dims)], p2.dims...)
 
 # derivedParams = derivedParameters(rawParams1.Ω, rawParams1.𝒜, rawParams1.N, rawParams1.k_Cd, rawParams1.k_Ca, rawParams1.k_Sd, rawParams1.k_Sa, rawParams1.k₁, rawParams1.k₂, rawParams1.k₃, rawParams1.k₄, rawParams1.𝒞, rawParams1.𝒮, rawParams1.ℰ, rawParams1.D_C, rawParams1.D_S, rawParams1.Tᵣstar; checks=true)
 # @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
 
-outLength = min(length(sol1.t), length(sol2.t))
+outLength = minimum([length(sol0.t), length(sol1.t), length(sol2.t)])-15
 frames = collect(1:outLength÷2-1:outLength)
 fig = Figure(size=(1000,1000), fontsize=18)
 
@@ -65,7 +67,11 @@ for x=2:4
     # Label(fig[2,x,Bottom()], popfirst!(letterArray))
     M = M̃(sol1.u[frames[x-1]], p1.W, p1.dims, p1.dν, p1.hᵥ)[:,1]
     lines!(axesVec[end], νs, M, linewidth=2)
-    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
+    @show sol1.t[frames[x-1]]
+    Muniform = M̃(sol0.u[frames[x-1]], p0.W, p0.dims, p0.dν, p0.hᵥ)[:,1]
+    lines!(axesVec[end], νs, Muniform, linewidth=2)
+    @show sol0.t[frames[x-1]]
+    text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24)
 end
 vlines!(axesVec[end], 0.5, color=(:black,0.5))
 
@@ -89,6 +95,10 @@ for x=2:4
     push!(axesVec, Axis(fig[5,x]))
     M = M̃(sol2.u[frames[x-1]], p2.W, p2.dims, p2.dν, p2.hᵥ)[:,1]
     lines!(axesVec[end], νs, M, linewidth=2)
+    @show sol2.t[frames[x-1]]
+    Muniform = M̃(sol0.u[frames[x-1]], p0.W, p0.dims, p0.dν, p0.hᵥ)[:,1]
+    lines!(axesVec[end], νs, Muniform, linewidth=2)
+    @show sol0.t[frames[x-1]]
     text!(axesVec[end], Point{2,Float64}(0.95,(1.5/sqrt(π))*40.0), text=popfirst!(letterArray), color=:black, align=(:right, :bottom), fontsize=24) 
 end
 vlines!(axesVec[end], 0.5, color=(:black,0.5))
@@ -120,7 +130,7 @@ for ax in axesVec[5:7]
     ax.ygridvisible = false
 end
 axesVec[5].yticklabelsvisible = true
-axesVec[7].xticks = (0.0:0.5:1.0, [L"0.0", L"\phi", L"1.0"])
+axesVec[7].xticks = (0.0:0.5:1.0, [L"0.0", L"\nu=\phi", L"1.0"])
 
 Label(fig[4,1,Left()], L"x")
 Label(fig[5,1,Top()], L"F_e")
@@ -145,7 +155,7 @@ for ax in axesVec[12:end]
     ax.yticklabelsvisible = false
 end
 axesVec[12].yticklabelsvisible = true
-axesVec[end].xticks = (0.0:0.5:1.0, [L"0.0", L"\phi", L"1.0"])
+axesVec[end].xticks = (0.0:0.5:1.0, [L"0.0", L"\nu=\phi", L"1.0"])
 
 colsize!(fig.layout, 1, Aspect(1, 1.0))
 colsize!(fig.layout, 2, Aspect(1, 1.0))
@@ -173,15 +183,15 @@ save(datadir("sims",subFolder,folderName,"Figure4.pdf"), fig)
 # @show sol1.t[frames]
 # @show sol2.t[frames]
 
-include(projectdir("notebooks", "paramsRaw.jl"))
-derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
-@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
-ind50 = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, 0.5) > 0.5*π, sol1.u)
-Tᵣ₅₀Star = sol1.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
-𝒫sim1 = Mstarϕ(sol1.u[ind50], p1.W, p1.dims, p1.dν, p1.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
-@show 𝒫sim1
+# include(projectdir("notebooks", "paramsRaw.jl"))
+# derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+# @unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
+# ind50 = findfirst(x->M̃ϕ(x, p1.W, p1.dims, p1.dν, p1.hᵥ, 0.5) > 0.5*π, sol1.u)
+# Tᵣ₅₀Star = sol1.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
+# 𝒫sim1 = Mstarϕ(sol1.u[ind50], p1.W, p1.dims, p1.dν, p1.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+# @show 𝒫sim1
 
-ind50 = findfirst(x->M̃ϕ(x, p2.W, p2.dims, p2.dν, p2.hᵥ, 0.5) > 0.5*π, sol2.u)
-Tᵣ₅₀Star = sol2.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
-𝒫sim2 = Mstarϕ(sol2.u[ind50], p2.W, p2.dims, p2.dν, p2.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
-@show 𝒫sim2
+# ind50 = findfirst(x->M̃ϕ(x, p2.W, p2.dims, p2.dν, p2.hᵥ, 0.5) > 0.5*π, sol2.u)
+# Tᵣ₅₀Star = sol2.t[ind50]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)    
+# 𝒫sim2 = Mstarϕ(sol2.u[ind50], p2.W, p2.dims, p2.dν, p2.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+# @show 𝒫sim2

@@ -1,0 +1,84 @@
+using OrdinaryDiffEq
+using SparseArrays
+using UnPack
+using CairoMakie 
+using FromFile
+using DrWatson
+using Printf
+using SciMLOperators
+using Dates
+using InvertedIndices
+using Statistics
+using JLD2
+
+@from "$(srcdir("Glycosylation.jl"))" using Glycosylation
+@from "$(srcdir("Visualise.jl"))" using Visualise
+@from "$(srcdir("UsefulFunctions.jl"))" using UsefulFunctions
+@from "$(srcdir("MakeWeightMatrices.jl"))" using MakeWeightMatrices
+@from "$(srcdir("DerivedParameters.jl"))" using DerivedParameters
+
+subFolder = "Figure5"
+terminateAt = "halfProduction"
+# terminateAt = ""
+thicknessProfile = "GRF"
+σGRF = 0.3
+λGRF = 0.2
+nSpatialDims = 2
+Ngrid = 201
+dims = fill(Ngrid, nSpatialDims+1)
+
+# include(projectdir("notebooks", "paramsDerived.jl"))
+include(projectdir("notebooks", "paramsRaw.jl"))
+derivedParams = derivedParameters(Ω, 𝒜, N, k_Cd, k_Ca, k_Sd, k_Sa, k₁, k₂, k₃, k₄, 𝒞, 𝒮, ℰ, D_C, D_S, Tᵣstar; checks=true)
+@unpack L₀, E₀, C_b, S_b, δ_C, δ_S, α_C, α_S, C₀, S₀, Tᵣ, T̃ᵣ, K₂, K₃, K₄, σ, ϵ, 𝒟, β, h_C, h_S, λ, ζ, γ, Δ, F = derivedParams
+
+# Create directory for run data labelled with current time.
+paramsName = @savename nSpatialDims K₂ K₄ α_C β 𝒟 T̃ᵣ thicknessProfile differencing
+folderName = "$(Dates.format(Dates.now(),"yy-mm-dd-HH-MM-SS"))_$(paramsName)_production"
+mkpath(datadir("sims",subFolder,folderName))
+
+sol1, p1 = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness=thicknessProfile, differencing=differencing, solver=solver, nOutputs=nOutputs, σGRF=σGRF, λGRF=λGRF, terminateAt=terminateAt, saveIntermediate=false)
+println("finished sim 1")
+
+Tᵣ₅₀Star = sol1.t[end]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)
+𝒫simGRF = Mstarϕ(sol1.u[end], p1.W, p1.dims, p1.dν, p1.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+@show 𝒫simGRF
+
+sol2, p2 = glycosylation(dims, K₂, K₄, T̃ᵣ, α_C, 𝒟, β, thickness="uniform", differencing=differencing, solver=solver, nOutputs=nOutputs, terminateAt=terminateAt, saveIntermediate=false)
+println("finished sim 2")
+Tᵣ₅₀Star = sol2.t[end]*(N^2)*(K₂+σ*K₃)/(k₁*E₀)
+𝒫simUniform = Mstarϕ(sol2.u[end], p2.W, p2.dims, p2.dν, p2.hᵥ, α_C, 𝒞, 0.5)/Tᵣ₅₀Star
+@show 𝒫simUniform
+
+rawParams = (
+    thicknessProfile = thicknessProfile,
+    differencing = differencing,
+    solver = solver,
+    nOutputs = nOutputs,
+    σGRF = σGRF,
+    λGRF = λGRF,
+    nSpatialDims = nSpatialDims,
+    Ngrid = Ngrid,
+    dims = dims,
+    h₀ = h₀,
+    𝒜 = 𝒜,
+    Ω = Ω,
+    N = N,
+    k_Cd = k_Cd,
+    k_Ca = k_Ca,
+    k_Sd = k_Sd,
+    k_Sa = k_Sa,
+    k₁ = k₁,
+    k₂ = k₂,
+    k₃ = k₃,
+    k₄ = k₄,
+    𝒞 = 𝒞,
+    𝒮 = 𝒮,
+    ℰ = ℰ,
+    D_C = D_C,
+    D_S = D_S,
+    Tᵣstar = Tᵣstar,
+    ϕ = ϕ
+)
+
+jldsave(datadir("sims",subFolder,folderName,"solution.jld2"); sol1, p1, sol2, p2, rawParams)
