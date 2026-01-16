@@ -133,7 +133,7 @@ axesVec[5].yticklabelsvisible = true
 axesVec[7].xticks = (0.0:0.5:1.0, [L"0.0", L"\nu=\phi", L"1.0"])
 
 Label(fig[4,1,Left()], L"x")
-Label(fig[5,1,Top()], L"F_e")
+Label(fig[5,1,Top()], L"F_E")
 axesVec[8].xgridvisible = false
 for ax in axesVec[9:11]
     ax.xticks = (0.0:1.0:1.0, [L"0.0", L"1.0"])
